@@ -1,0 +1,9 @@
+// List of commands:
+//~~~~~~~~~~~~~~~~~~~
+// ip	 - Specifies the IP the server is to be run on. If left unspecified,
+//		   it will run on all available addresses.
+// port	 - Specifies the port the server is to be run on. If left unspecified,
+//		   it will run on port 7249.
+
+ip = 127.0.0.1
+port = 7249
