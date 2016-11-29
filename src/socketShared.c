@@ -37,7 +37,6 @@ int ssLoadConfig(socketServer *server, const char *prgPath){
 	char line[1000];
 	char compare[8];
 	char lineData[1000];
-	char *strtolPtr;
 
 	if(serverConfig != NULL){
 		while(!feof(serverConfig)){
@@ -61,7 +60,7 @@ int ssLoadConfig(socketServer *server, const char *prgPath){
 				ssSubstringHelper(compare, line, 0, 7);
 				if(strcmp(compare, "port = ") == 0){
 					ssSubstringHelper(lineData, line, 7, strlen(line) - 7);
-					server->port = strtol(lineData, &strtolPtr, 10);
+					server->port = strtol(lineData, NULL, 10);
 				}
 
 			}
