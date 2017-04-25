@@ -1,1 +1,1 @@
-g++ main.c inetPton.c socketVector.c socketShared.c socketTCP.c socketUDP.c -o SocketServerBase.exe -lWs2_32
+g++ main.c inetPton.c cVector.c socketShared.c socketTCP.c socketUDP.c -o SocketServerBase.exe -lWs2_32
