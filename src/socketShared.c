@@ -8,7 +8,7 @@ int ssGetAddressFamily(const char *ip){
 	}else if(inet_pton(AF_INET6, ip, buffer)) {
 		return AF_INET6;
 	}
-	return AF_UNSPEC;
+	return -1;
 }
 
 void ssReportError(const char *failedFunction, int errorCode){

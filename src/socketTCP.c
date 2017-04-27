@@ -10,7 +10,7 @@ int ssInitTCP(socketTCP *server, const int argc, const char *argv[], int (*loadC
 	server->hostData.ip[0] = '\0';
 	server->hostData.port = DEFAULT_PORT_TCP;
 
-	if(argc > 0 && loadConfig != NULL){  /** NEEDS FIXING **/
+	if(loadConfig != NULL){
 		loadConfig(server->hostData.ip, &server->hostData.port, argc, argv);
 	}
 
@@ -34,8 +34,11 @@ int ssInitTCP(socketTCP *server, const int argc, const char *argv[], int (*loadC
 	   type = SOCK_STREAM, which uses TCP or SOCK_DGRAM, which uses UDP
 	   protocol = IPPROTO_TCP, which specifies to use TCP or IPPROTO_TCP, which specifies to use UDP
 	*/
-	int addressFamily = ssGetAddressFamily(server->hostData.ip);  // Get the address family of the host address
-	server->hostData.masterSocket = socket(addressFamily, SOCK_STREAM, IPPROTO_TCP);  // TCP socket
+	server->hostData.af = ssGetAddressFamily(server->hostData.ip);
+	if(server->hostData.af == -1){
+		server->hostData.af = DEFAULT_ADDRESS_FAMILY_TCP;
+	}
+	server->hostData.masterSocket = socket(server->hostData.af, SOCK_STREAM, IPPROTO_TCP);  // TCP socket
 	if(server->hostData.masterSocket == INVALID_SOCKET){  // If socket() failed, abort
 		ssReportError("socket()", lastErrorID);
 		#ifdef _WIN32
@@ -46,21 +49,42 @@ int ssInitTCP(socketTCP *server, const int argc, const char *argv[], int (*loadC
 
 
 	/* Bind the master socket to the host address */
-	// Create the sockaddr_in structure using the master socket's address family and the supplied IP / port
-	struct sockaddr_in serverAddress;
-	// If the IP has been specified and the address family is valid, convert the IP from a string to the in_addr format for sockaddr_in
-	if(strlen(server->hostData.ip) > 0 && addressFamily != AF_UNSPEC){
-		inet_pton(addressFamily, server->hostData.ip, (char*)&(serverAddress.sin_addr));
-	}else{  // Otherwise use all available addresses
-		serverAddress.sin_addr.s_addr = INADDR_ANY;
-		strcpy(server->hostData.ip, "INADDR_ANY");
-		addressFamily = DEFAULT_ADDRESS_FAMILY;
-	}
-	serverAddress.sin_family = addressFamily;
-	serverAddress.sin_port = htons(server->hostData.port);  // htons() converts the port from big-endian to little-endian for sockaddr_in
+	struct sockaddr *serverDetails = 0;
+	int serverDetailsLength = -1;
 
-	// Bind the address to the TCP socket
-	if(bind(server->hostData.masterSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR){  // If bind() failed, abort
+	if(server->hostData.af == AF_INET){
+
+		// Create the sockaddr_in structure using the master socket's address family and the supplied IP / port
+		struct sockaddr_in serverAddress4;
+		if(!inet_pton(server->hostData.af, server->hostData.ip, (char*)&(serverAddress4.sin_addr))){
+			serverAddress4.sin_addr.s_addr = INADDR_ANY;
+			strcpy(server->hostData.ip, "INADDR_ANY");
+		}
+		serverAddress4.sin_family = server->hostData.af;
+		serverAddress4.sin_port = htons(server->hostData.port);  // htons() converts the port from big-endian to little-endian for sockaddr_in
+		// Convert sockaddr_in to sockaddr
+		serverDetails = (struct sockaddr*)&serverAddress4;
+		serverDetailsLength = sizeof(serverAddress4);
+
+	}else if(server->hostData.af == AF_INET6){  // Address is IPv6
+
+		// Create the sockaddr_in6 structure using the master socket's address family and the supplied IP / port
+		struct sockaddr_in6 serverAddress6;
+		memset(&serverAddress6, 0, sizeof(struct sockaddr_in6));  // Set everything in sockaddr_in6 to 0, as there are a number of fields we don't otherwise set
+		if(!inet_pton(server->hostData.af, server->hostData.ip, (char*)&(serverAddress6.sin6_addr))){
+			serverAddress6.sin6_addr = in6addr_any;
+			strcpy(server->hostData.ip, "in6addr_any");
+		}
+		serverAddress6.sin6_family = server->hostData.af;
+		serverAddress6.sin6_port = htons(server->hostData.port);  // htons() converts the port from big-endian to little-endian for sockaddr_in6
+		// Convert sockaddr_in6 to sockaddr
+		serverDetails = (struct sockaddr*)&serverAddress6;
+		serverDetailsLength = sizeof(serverAddress6);
+
+	}
+
+	// Check result of bind()
+	if(bind(server->hostData.masterSocket, serverDetails, serverDetailsLength) == SOCKET_ERROR){  // If bind() failed, abort
 		ssReportError("bind()", lastErrorID);
 		#ifdef _WIN32
 			WSACleanup();

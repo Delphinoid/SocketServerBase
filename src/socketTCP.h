@@ -3,11 +3,14 @@
 
 #include "socketShared.h"
 
-#ifndef MAX_BUFFER_SIZE_TCP
-	#define MAX_BUFFER_SIZE_TCP 1024
+#ifndef DEFAULT_ADDRESS_FAMILY_TCP
+	#define DEFAULT_ADDRESS_FAMILY_TCP AF_INET6
 #endif
 #ifndef DEFAULT_PORT_TCP
 	#define DEFAULT_PORT_TCP 7249
+#endif
+#ifndef MAX_BUFFER_SIZE_TCP
+	#define MAX_BUFFER_SIZE_TCP 1024
 #endif
 
 typedef struct {

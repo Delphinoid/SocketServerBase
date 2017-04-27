@@ -85,7 +85,7 @@ void handleDisconnectTCP(socketTCP *server, unsigned int socketID){
 	printf("Closing TCP connection with socket #%i.\n\n", *((SOCKET*)cvGet(&server->connectedSockets, socketID)));
 }
 
-void handleBufferUDP(socketUDP *server, struct sockaddr_in *sender){
+void handleBufferUDP(socketUDP *server, struct sockaddr *sender){
 	printf("Data received over UDP: %s\n", server->lastBuffer);
 	ssSendDataUDP(server, sender, "Data received over UDP successfully. You might get this.\n");
 }
