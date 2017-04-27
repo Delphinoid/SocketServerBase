@@ -14,8 +14,8 @@ typedef struct {
 
 	socketShared hostData;
 	cVector connectedSockets;  // Intended to be an array of sockaddr_ins that have sent data over UDP; whether or not this is used is up to the implementation
-	int recvBytes;  // Length of the last buffer recieved over UDP
-	char lastBuffer[MAX_BUFFER_SIZE_UDP];  // Last buffer ("message") received from a client over UDP. Buffers are capped at MAX_BUFFER_SIZE_UDP bytes
+	int recvBytes;  // Length of the last message recieved over UDP
+	char lastBuffer[MAX_BUFFER_SIZE_UDP];  // Last message received from a client over UDP. Buffers are capped at MAX_BUFFER_SIZE_UDP bytes
 
 } socketUDP;
 

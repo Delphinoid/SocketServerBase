@@ -1,6 +1,9 @@
 #ifndef SOCKETSHARED_H
 #define SOCKETSHARED_H
 
+#include "cVector.h"
+#include <stdint.h>
+
 #ifdef _WIN32
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
@@ -17,8 +20,9 @@
 	typedef int SOCKET;
 #endif
 
-#include "cVector.h"
-#include <stdint.h>
+#ifndef DEFAULT_ADDRESS_FAMILY
+	#define DEFAULT_ADDRESS_FAMILY AF_INET
+#endif
 
 typedef struct {
 
@@ -29,7 +33,8 @@ typedef struct {
 } socketShared;
 
 // Socket functions shared by TCP and UDP sockets
-int inet_pton(int af, const char *src, char *dst);
+int  inet_pton(int af, const char *src, char *dst);
+int  ssGetAddressFamily(const char *ip);
 void ssReportError(const char *failedFunction, int errorCode);
 void ssShutdownShared();
 

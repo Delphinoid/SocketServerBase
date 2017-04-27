@@ -34,6 +34,7 @@ int ssInitUDP(socketUDP *server, const int argc, const char *argv[], int (*loadC
 	   type = SOCK_STREAM, which uses TCP or SOCK_DGRAM, which uses UDP
 	   protocol = IPPROTO_TCP, which specifies to use TCP or IPPROTO_TCP, which specifies to use UDP
 	*/
+	int addressFamily = ssGetAddressFamily(server->hostData.ip);
 	server->hostData.masterSocket = socket(AF_UNSPEC, SOCK_DGRAM,  IPPROTO_UDP);  // UDP socket
 	if(server->hostData.masterSocket == INVALID_SOCKET){  // If socket() failed, abort
 		ssReportError("socket()", lastErrorID);
@@ -45,26 +46,22 @@ int ssInitUDP(socketUDP *server, const int argc, const char *argv[], int (*loadC
 
 
 	/* Bind the master socket to the host address */
-	WSAPROTOCOL_INFO protocolInfo;
-	// Retrieve details about the master socket (we want the address family being used)
-	WSADuplicateSocket(server->hostData.masterSocket, GetCurrentProcessId(), &protocolInfo);
-
 	// Create the sockaddr_in structure using the master socket's address family and the supplied IP / port
 	struct sockaddr_in serverAddress;
-	serverAddress.sin_family = protocolInfo.iAddressFamily;
-
-	if(strlen(server->hostData.ip) > 0){  // If the IP has been specified, convert it from a string to the in_addr format for sockaddr_in
-		inet_pton(protocolInfo.iAddressFamily, server->hostData.ip, (char*)&(serverAddress.sin_addr));
-	}else{	  // Otherwise use all available addresses
+	// If the IP has been specified and the address family is valid, convert the IP from a string to the in_addr format for sockaddr_in
+	if(strlen(server->hostData.ip) > 0 && addressFamily != AF_UNSPEC){
+		inet_pton(addressFamily, server->hostData.ip, (char*)&(serverAddress.sin_addr));
+	}else{  // Otherwise use all available addresses
 		serverAddress.sin_addr.s_addr = INADDR_ANY;
 		strcpy(server->hostData.ip, "INADDR_ANY");
+		addressFamily = DEFAULT_ADDRESS_FAMILY;
 	}
-
+	serverAddress.sin_family = addressFamily;
 	serverAddress.sin_port = htons(server->hostData.port);  // htons() converts the port from big-endian to little-endian for sockaddr_in
 
 	// Bind the address to the UDP socket
 	if(bind(server->hostData.masterSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR){  // If bind() failed, abort
-		ssReportError("bind()", WSAGetLastError());
+		ssReportError("bind()", lastErrorID);
 		#ifdef _WIN32
 			WSACleanup();
 		#endif

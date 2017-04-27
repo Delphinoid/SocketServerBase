@@ -15,8 +15,8 @@ typedef struct {
 	socketShared hostData;
 	FD_SET socketSet;        // Set of sockets connected over TCP for select()
 	cVector connectedSockets;  // Array of SOCKETs connected over TCP
-	int recvBytes;  // Length of the last buffer recieved over TCP
-	char lastBuffer[MAX_BUFFER_SIZE_TCP];  // Last buffer ("message") received from a client over TCP. Buffers are capped at MAX_BUFFER_SIZE_TCP bytes
+	int recvBytes;  // Length of the last message recieved over TCP
+	char lastBuffer[MAX_BUFFER_SIZE_TCP];  // Last message received from a client over TCP. Buffers are capped at MAX_BUFFER_SIZE_TCP bytes
 
 } socketTCP;
 
