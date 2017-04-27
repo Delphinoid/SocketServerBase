@@ -3,12 +3,12 @@
 
 int ssGetAddressFamily(const char *ip){
 	char buffer[16];
-    if(inet_pton(AF_INET, ip, buffer)){
-        return AF_INET;
-    }else if(inet_pton(AF_INET6, ip, buffer)) {
-        return AF_INET6;
-    }
-    return AF_UNSPEC;
+	if(inet_pton(AF_INET, ip, buffer)){
+		return AF_INET;
+	}else if(inet_pton(AF_INET6, ip, buffer)) {
+		return AF_INET6;
+	}
+	return AF_UNSPEC;
 }
 
 void ssReportError(const char *failedFunction, int errorCode){
