@@ -9,6 +9,8 @@
 	#include <ws2tcpip.h>
 	#define lastErrorID WSAGetLastError()
 	#define WINSOCK_VERSION MAKEWORD(2, 2)
+	int  ssStartup();
+	void ssCleanup();
 #else
 	#include <sys/socket.h>
 	#include <arpa/inet.h>
@@ -33,6 +35,6 @@ typedef struct {
 int  inet_pton(int af, const char *src, char *dst);
 int  ssGetAddressFamily(const char *ip);
 void ssReportError(const char *failedFunction, int errorCode);
-void ssShutdownShared();
+int  ssInitShared(socketShared *hostData, int hostType, int hostProtocol);
 
 #endif

@@ -82,7 +82,7 @@ void handleBufferTCP(socketTCP *server, unsigned int socketID){
 }
 
 void handleDisconnectTCP(socketTCP *server, unsigned int socketID){
-	printf("Closing TCP connection with socket #%i.\n\n", *((SOCKET*)cvGet(&server->connectedSockets, socketID)));
+	printf("Closing TCP connection with socket #%i.\n", *((SOCKET*)cvGet(&server->connectedSockets, socketID)));
 }
 
 void handleBufferUDP(socketUDP *server, struct sockaddr *sender){
@@ -97,6 +97,7 @@ void handleDisconnectUDP(socketUDP *server){
 void cleanup(){
 	ssShutdownTCP(&testServerTCP);
 	ssShutdownUDP(&testServerUDP);
+	ssCleanup();  // Terminate Winsock
 	CloseHandle(tcpThreadID);
 }
 
@@ -107,8 +108,9 @@ DWORD WINAPI handleTCP(){
 
 int main(int argc, char *argv[]){
 
-	if(!ssInitTCP(&testServerTCP, (const int)argc, (const char **)argv, &loadConfig) ||
-	   !ssInitUDP(&testServerUDP, (const int)argc, (const char **)argv, &loadConfig))  // Initialize the server
+	if(!ssStartup() ||  // Initialize Winsock
+	   !ssInitTCP(&testServerTCP, (const int)argc, (const char **)argv, &loadConfig) ||
+	   !ssInitUDP(&testServerUDP, (const int)argc, (const char **)argv, &loadConfig))
 		return 1;
 
 	tcpThreadID = CreateThread(NULL, 0, handleTCP, NULL, 0, NULL);
