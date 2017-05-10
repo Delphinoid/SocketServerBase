@@ -23,8 +23,8 @@ typedef struct {
 } socketUDP;
 
 int  ssInitUDP(socketUDP *server, const int argc, const char *argv[], int (*loadConfig)(char*, uint16_t*, const int, const char**));
-void ssSendDataUDP(socketUDP *server, struct sockaddr *client, const char *msg);
-void ssHandleConnectionsUDP(socketUDP *server, void (*handleBuffer)(socketUDP*, struct sockaddr*), void (*handleDisconnect)(socketUDP*));
+void ssSendDataUDP(socketUDP *server, struct sockaddr_storage *client, const char *msg);
+void ssHandleConnectionsUDP(socketUDP *server, void (*handleBuffer)(socketUDP*, struct sockaddr_storage*), void (*handleDisconnect)(socketUDP*));
 void ssShutdownUDP(socketUDP *server);
 
 #endif

@@ -31,23 +31,23 @@ int ssInitUDP(socketUDP *server, const int argc, const char *argv[], int (*loadC
 
 }
 
-void ssSendDataUDP(socketUDP *server, struct sockaddr *client, const char *msg){
-	if(sendto(server->hostData.masterSocket, msg, strlen(msg), 0, client, sizeof(struct sockaddr_in6)) < 0){  // Use the size of sockaddr_in6
+void ssSendDataUDP(socketUDP *server, struct sockaddr_storage *client, const char *msg){
+	if(sendto(server->hostData.masterSocket, msg, strlen(msg), 0, (struct sockaddr*)client, sizeof(struct sockaddr_storage)) < 0){
 		ssReportError("sendto()", lastErrorID);
 	}
 }
 
 void ssHandleConnectionsUDP(socketUDP *server,
-                            void (*handleBuffer)(socketUDP*, struct sockaddr*),
+                            void (*handleBuffer)(socketUDP*, struct sockaddr_storage*),
                             void (*handleTimeout)(socketUDP*)){
 
 	// Create sockaddr struct for the socket we are receiving data from
-	struct sockaddr socketDetails;
-	int socketDetailsSize = sizeof(struct sockaddr_in6);  // Use the size of sockaddr_in6
+	struct sockaddr_storage socketDetails;
+	int socketDetailsSize = sizeof(struct sockaddr_storage);
 
 	// Receives up to MAX_BUFFER_SIZE_UDP bytes of data from a client socket and stores it in lastBuffer
 	memset(server->lastBuffer, 0, MAX_BUFFER_SIZE_UDP);  // Reset lastBuffer
-	server->recvBytes = recvfrom(server->hostData.masterSocket, server->lastBuffer, MAX_BUFFER_SIZE_UDP, 0, &socketDetails, &socketDetailsSize);
+	server->recvBytes = recvfrom(server->hostData.masterSocket, server->lastBuffer, MAX_BUFFER_SIZE_UDP, 0, (struct sockaddr*)&socketDetails, &socketDetailsSize);
 
 	if(server->recvBytes == -1){  // Error encountered
 		if(lastErrorID != 10054){  // Don't bother reporting the error if it's WSAECONNRESET, as it can be ignored here
