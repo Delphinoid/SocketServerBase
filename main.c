@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
-socketTCP testServerTCP;
-socketUDP testServerUDP;
+socketServer testServerTCP;
+socketServer testServerUDP;
 HANDLE tcpThreadID;
 
 void substringHelper(char *strTarget, char *strCopy, unsigned int pos, unsigned int length){
@@ -22,7 +22,7 @@ void substringHelper(char *strTarget, char *strCopy, unsigned int pos, unsigned 
 	}
 }
 
-int loadConfig(char *ip, uint16_t *port, const int argc, const char *argv[]){
+int loadConfig(socketServer *server, const int argc, const char *argv[]){
 
 	char *cfgPath = (char*)argv[0];
 	cfgPath[strrchr(cfgPath, '\\') - cfgPath + 1] = '\0';  // Removes program name (everything after the last backslash) from the path
@@ -49,13 +49,13 @@ int loadConfig(char *ip, uint16_t *port, const int argc, const char *argv[]){
 				if(strcmp(compare, "ip = ") == 0){
 					substringHelper(lineData, line, 5, strlen(line) - 6);
 					if(strlen(lineData) <= 39){
-						strcpy(ip, lineData);
+						strcpy(server->ip, lineData);
 					}
 				}
 				substringHelper(compare, line, 0, 7);
 				if(strcmp(compare, "port = ") == 0){
 					substringHelper(lineData, line, 7, strlen(line) - 7);
-					*port = strtol(lineData, NULL, 10);
+					server->port = strtol(lineData, NULL, 10);
 				}
 
 			}
@@ -76,21 +76,21 @@ int loadConfig(char *ip, uint16_t *port, const int argc, const char *argv[]){
 
 }
 
-void handleBufferTCP(socketTCP *server, unsigned int socketID){
+void handleBufferTCP(socketServer *server, unsigned int socketID){
 	printf("Data received over TCP: %s\n", server->lastBuffer);
 	ssSendDataTCP(server, socketID, "Data received over TCP successfully. You should get this.\n");
 }
 
-void handleDisconnectTCP(socketTCP *server, unsigned int socketID){
+void handleDisconnectTCP(socketServer *server, unsigned int socketID){
 	printf("Closing TCP connection with socket #%i.\n", *((SOCKET*)cvGet(&server->connectedSockets, socketID)));
 }
 
-void handleBufferUDP(socketUDP *server, struct sockaddr_storage *client){
+void handleBufferUDP(socketServer *server, struct sockaddr_storage *client){
 	printf("Data received over UDP: %s\n", server->lastBuffer);
 	ssSendDataUDP(server, client, "Data received over UDP successfully. You might get this.\n");
 }
 
-void handleDisconnectUDP(socketUDP *server){
+void handleDisconnectUDP(socketServer *server){
 	// Check for timeouts, if applicable
 }
 
@@ -109,8 +109,8 @@ DWORD WINAPI handleTCP(){
 int main(int argc, char *argv[]){
 
 	if(!ssStartup() ||  // Initialize Winsock
-	   !ssInitTCP(&testServerTCP, (const int)argc, (const char **)argv, &loadConfig) ||
-	   !ssInitUDP(&testServerUDP, (const int)argc, (const char **)argv, &loadConfig))
+	   !ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, (const int)argc, (const char **)argv, &loadConfig) ||
+	   !ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, (const int)argc, (const char **)argv, &loadConfig))
 		return 1;
 
 	tcpThreadID = CreateThread(NULL, 0, handleTCP, NULL, 0, NULL);
