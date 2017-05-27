@@ -34,7 +34,7 @@ void ssHandleConnectionsTCP(socketServer *server,
 
 				if(clientSocket != INVALID_SOCKET){
 					FD_SET(clientSocket, &socketSet);
-					cvPush(&server->connectedSockets, &clientSocket, INT_T, 1);
+					cvPush(&server->connectedSockets, &clientSocket, sizeof(clientSocket));
 					printf("Accepted TCP connection from socket #%i.\n", clientSocket);
 				}else{
 					ssReportError("accept()", lastErrorID);
