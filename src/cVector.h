@@ -9,14 +9,14 @@ typedef struct cVector {
 	void **buffer;
 } cVector;
 
-void cvInit(cVector *vec, unsigned int startCapacity);
-void cvResize(cVector *vec, size_t capacity);
-void cvPush(cVector *vec, void *data, unsigned int bytes);
+void cvInit(cVector *vec, const size_t capacity);
+void cvResize(cVector *vec, const size_t capacity);
+void cvPush(cVector *vec, const void *data, size_t bytes);
 void cvPop(cVector *vec);
-void cvInsert(cVector *vec, unsigned int pos, void *data, unsigned int bytes);
-void cvErase(cVector *vec, unsigned int pos);
-void *cvGet(cVector *vec, unsigned int pos);
-void cvSet(cVector *vec, unsigned int pos, void *data, unsigned int bytes);
+void cvInsert(cVector *vec, const size_t pos, const void *data, const size_t bytes);
+void cvErase(cVector *vec, const size_t pos);
+void *cvGet(cVector *vec, const size_t pos);
+void cvSet(cVector *vec, const size_t pos, const void *data, const size_t bytes);
 size_t cvSize(cVector *vec);
 void cvClear(cVector *vec);
 
