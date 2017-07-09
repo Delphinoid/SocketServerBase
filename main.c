@@ -4,11 +4,15 @@
 #include <string.h>
 #include <stdio.h>
 
+#define MAX_SOCKETS 101
+
 socketServer testServerTCP;
 socketServer testServerUDP;
 HANDLE tcpThreadID;
 
-unsigned char loadConfig(socketServer *server, const int argc, const char *argv[]){
+const char *inet_ntop(int af, const void *src, char *dst, size_t size);
+
+unsigned char ssLoadConfig(char (*ip)[40], uint16_t *port, const int argc, const char *argv[]){
 
 	char *cfgPath = (char*)argv[0];
 	cfgPath[strrchr(cfgPath, '\\') - cfgPath + 1] = '\0';  // Removes program name (everything after the last backslash) from the path
@@ -61,11 +65,11 @@ unsigned char loadConfig(socketServer *server, const int argc, const char *argv[
 			if(lineLength > 7){
 				// IP
 				if(strncpy(compare, line, 5) && (compare[5] = '\0') == 0 && strcmp(compare, "ip = ") == 0){
-					strncpy(server->ip, line+5, 40);
+					strncpy(*ip, line+5, 40);
 
 				// Port
 				}else if(strncpy(compare, line, 7) && (compare[7] = '\0') == 0 && strcmp(compare, "port = ") == 0){
-					server->port = strtol(line+7, NULL, 0);
+					*port = strtol(line+7, NULL, 0);
 
 				}
 			}
@@ -87,17 +91,41 @@ unsigned char loadConfig(socketServer *server, const int argc, const char *argv[
 }
 
 void handleBufferTCP(socketServer *server, size_t socketID){
-	printf("Data received over TCP: %s\n", server->lastBuffer);
+	ssSocket *socket = (ssSocket *)cvGet(&server->connectedSockets, socketID);
+	char recvIP[40];
+	inet_ntop(socket->details.ss_family,
+	          (socket->details.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&socket->details)->sin6_addr)),
+	          &recvIP[0],
+	          sizeof(recvIP));
+	printf("Data received over TCP from %s (socket #%i): %s\n", recvIP, socket->handle.fd, server->lastBuffer);
 	ssSendDataTCP(server, socketID, "Data received over TCP successfully. You should get this.\n");
 }
 
 void handleDisconnectTCP(socketServer *server, size_t socketID){
-	printf("Closing TCP connection with socket #%i.\n", *((SOCKET*)cvGet(&server->connectedSockets, socketID)));
+	ssSocket *socket = (ssSocket *)cvGet(&server->connectedSockets, socketID);
+	char recvIP[40];
+	inet_ntop(socket->details.ss_family,
+	          (socket->details.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&socket->details)->sin6_addr)),
+	          &recvIP[0],
+	          sizeof(recvIP));
+	printf("Closing TCP connection with %s (socket #%i).\n", recvIP, socket->handle.fd);
+	ssDisconnectSocketTCP(server, socketID);
 }
 
-void handleBufferUDP(socketServer *server, struct sockaddr_storage *client){
-	printf("Data received over UDP: %s\n", server->lastBuffer);
-	ssSendDataUDP(server, client, "Data received over UDP successfully. You might get this.\n");
+void handleBufferUDP(socketServer *server, ssSocket *socket){
+	char recvIP[40];
+	inet_ntop(socket->details.ss_family,
+	          (socket->details.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&socket->details)->sin6_addr)),
+	          &recvIP[0],
+	          sizeof(recvIP));
+	printf("Data received over UDP from %s: %s\n", recvIP, server->lastBuffer);
+	ssSendDataUDP(server, socket, "Data received over UDP successfully. You might get this.\n");
 }
 
 void handleDisconnectUDP(socketServer *server){
@@ -119,8 +147,8 @@ DWORD WINAPI handleTCP(){
 int main(int argc, char *argv[]){
 
 	if(!ssStartup() ||  // Initialize Winsock
-	   !ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, (const int)argc, (const char **)argv, &loadConfig) ||
-	   !ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, (const int)argc, (const char **)argv, &loadConfig))
+	   !ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, (const int)argc, (const char **)argv, &ssLoadConfig) ||
+	   !ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, (const int)argc, (const char **)argv, &ssLoadConfig))
 		return 1;
 
 	tcpThreadID = CreateThread(NULL, 0, handleTCP, NULL, 0, NULL);

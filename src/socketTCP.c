@@ -1,9 +1,26 @@
 #include "socketTCP.h"
 #include <stdio.h>
 
+size_t ssFindSocketTCP(socketServer *server, ssSocket *socket){
+	size_t socketID = server->connectedSockets.size;
+	while(socketID > 0){
+		if(((ssSocket *)cvGet(&server->connectedSockets, --socketID))->handle.fd == socket->handle.fd){
+			break;
+		}
+	}
+	return socketID;
+}
+
 void ssSendDataTCP(socketServer *server, size_t socketID, const char *msg){
-	if(send(*((SOCKET*)cvGet(&server->connectedSockets, socketID)), msg, strlen(msg) + 1, 0) < 0){
+	if(send(((ssSocket *)cvGet(&server->connectedSockets, socketID))->handle.fd, msg, strlen(msg) + 1, 0) < 0){
 		ssReportError("send()", lastErrorID);
+	}
+}
+
+void ssDisconnectSocketTCP(socketServer *server, size_t socketID){
+	if(socketID != 0){
+		closesocket(((ssSocket *)cvGet(&server->connectedSockets, socketID))->handle.fd);
+		cvErase(&server->connectedSockets, socketID);
 	}
 }
 
@@ -11,13 +28,12 @@ void ssHandleConnectionsTCP(socketServer *server,
                             void (*handleBuffer)(socketServer*, size_t),
                             void (*handleDisconnect)(socketServer*, size_t)){
 
-	// Fill and perform operations on a temporary FD_SET, as select() may modify it
-	FD_SET socketSet;
+	// Fill and perform operations on a temporary fd_set, as select() may modify it
+	fd_set socketSet;
 	FD_ZERO(&socketSet);
-	FD_SET(server->masterSocket, &socketSet);
 	size_t i;
 	for(i = 0; i < server->connectedSockets.size; i++){
-		FD_SET(*((SOCKET*)cvGet(&server->connectedSockets, i)), &socketSet);
+		FD_SET(((ssSocket *)cvGet(&server->connectedSockets, i))->handle.fd, &socketSet);
 	}
 
 	// Checks which sockets have changed state, and removes the ones that haven't from socketSet
@@ -27,52 +43,52 @@ void ssHandleConnectionsTCP(socketServer *server,
 
 		if(changedSockets > 0){  // Only continue if there are sockets that have changed state
 
+			size_t i = 0;
+
 			/* If the master socket has changed state, there is an incoming connection. Accept the connection if the socket is valid */
-			if(FD_ISSET(server->masterSocket, &socketSet)){
+			if(socketSet.fd_array[i] == ssMasterSocket(server)->handle.fd){
 
-				SOCKET clientSocket = accept(server->masterSocket, NULL, NULL);
+				ssSocket client;
+				int socketDetailsSize = sizeof(client.details);
+				client.handle.fd = accept(ssMasterSocket(server)->handle.fd, (struct sockaddr *)&client.details, &socketDetailsSize);
 
-				if(clientSocket != INVALID_SOCKET){
-					FD_SET(clientSocket, &socketSet);
-					cvPush(&server->connectedSockets, &clientSocket, sizeof(clientSocket));
-					printf("Accepted TCP connection from socket #%i.\n", clientSocket);
+				if(client.handle.fd != INVALID_SOCKET){
+					cvPush(&server->connectedSockets, &client, sizeof(client));
+					printf("Accepted TCP connection from socket #%i.\n", client.handle.fd);
 				}else{
 					ssReportError("accept()", lastErrorID);
 				}
 
+				i++;
+				changedSockets--;
+
 			}
 
 			/* Receive data from and send data to connected sockets */
-			for(i = 0; i < server->connectedSockets.size; i++){  // Loop through each connected socket
+			for(; i < server->connectedSockets.size && changedSockets > 0; i++){  // Loop through each connected socket
 
-				if(FD_ISSET(*((SOCKET*)cvGet(&server->connectedSockets, i)), &socketSet)){  // Check if the socket actually has changed state
+				if(FD_ISSET(((ssSocket *)cvGet(&server->connectedSockets, i))->handle.fd, &socketSet)){
 
 					// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer
 					memset(server->lastBuffer, 0, MAX_BUFFER_SIZE);  // Reset lastBuffer
-					server->recvBytes = recv(*((SOCKET*)cvGet(&server->connectedSockets, i)), server->lastBuffer, MAX_BUFFER_SIZE, 0);
+					server->recvBytes = recv(socketSet.fd_array[i], server->lastBuffer, MAX_BUFFER_SIZE, 0);
 
 					if(server->recvBytes == -1){  // Error encountered, disconnect problematic socket
 
 						ssReportError("recv()", lastErrorID);
 						(*handleDisconnect)(server, i);
-						closesocket(*((SOCKET*)cvGet(&server->connectedSockets, i)));
-						FD_CLR(*((SOCKET*)cvGet(&server->connectedSockets, i)), &socketSet);
-						cvErase(&server->connectedSockets, i);
-						i--;
 
 					}else if(server->recvBytes == 0){  // If the buffer is empty, the connection has closed
 
 						(*handleDisconnect)(server, i);
-						closesocket(*((SOCKET*)cvGet(&server->connectedSockets, i)));
-						FD_CLR(*((SOCKET*)cvGet(&server->connectedSockets, i)), &socketSet);
-						cvErase(&server->connectedSockets, i);
-						i--;
 
 					}else{  // Data received
 
 						(*handleBuffer)(server, i);  // Do something with the received data
 
 					}
+
+					changedSockets--;
 
 				}
 
@@ -89,9 +105,10 @@ void ssHandleConnectionsTCP(socketServer *server,
 }
 
 void ssShutdownTCP(socketServer *server){
-	size_t i;
-	for(i = 0; i < server->connectedSockets.size; i++){
-		closesocket(*((SOCKET*)cvGet(&server->connectedSockets, i)));
+	size_t i = server->connectedSockets.size;
+	while(i > 0){
+		closesocket(*((SOCKET*)cvGet(&server->connectedSockets, --i)));
+		cvPop(&server->connectedSockets);
 	}
 	cvClear(&server->connectedSockets);
 }
