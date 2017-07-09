@@ -14,8 +14,7 @@ void cvResize(cVector *vec, const size_t capacity){
 	if(vec->capacity != capacity){
 		void **tempBuffer = realloc(vec->buffer, sizeof(void *) * capacity);
 		if(tempBuffer != NULL){
-			void **newData = tempBuffer;
-			vec->buffer = newData;
+			vec->buffer = tempBuffer;
 			vec->capacity = capacity;
 		}
 	}
@@ -60,13 +59,10 @@ void cvInsert(cVector *vec, const size_t pos, const void *data, const size_t byt
 void cvErase(cVector *vec, const size_t pos){
 	if(pos < vec->size){
 		free(vec->buffer[pos]);
+		vec->size--;
 		size_t i;
-		for(i = pos; i < vec->size - 1; i++){
+		for(i = pos; i < vec->size; i++){
 			vec->buffer[i] = vec->buffer[i + 1];
-		}
-		free(vec->buffer[--vec->size]);
-		if(vec->size > 0 && vec->size == vec->capacity / 4){
-			cvResize(vec, vec->capacity / 2);
 		}
 	}
 }
