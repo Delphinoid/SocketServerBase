@@ -8,56 +8,66 @@ socketServer testServerTCP;
 socketServer testServerUDP;
 HANDLE tcpThreadID;
 
-void substringHelper(char *strTarget, char *strCopy, unsigned int pos, unsigned int length){
-	if(pos + length <= strlen(strCopy)){
-		unsigned int d;
-		for(d = 0; d < length; d++){
-			if(strCopy[pos + d] == '\n'){
-				d = length;
-			}else{
-				strTarget[d] = strCopy[pos + d];
-			}
-		}
-		strTarget[length] = '\0';
-	}
-}
-
-int loadConfig(socketServer *server, const int argc, const char *argv[]){
+unsigned char loadConfig(socketServer *server, const int argc, const char *argv[]){
 
 	char *cfgPath = (char*)argv[0];
 	cfgPath[strrchr(cfgPath, '\\') - cfgPath + 1] = '\0';  // Removes program name (everything after the last backslash) from the path
 	strcpy(cfgPath + strlen(cfgPath), "config.txt");  // Append "config.txt" to the end
 
 	FILE *serverConfig = fopen(cfgPath, "r");
-	char line[1000];
-	char compare[8];
-	char lineData[1000];
+	char lineFeed[1024];
+	char *line;
+	char compare[1024];
+	size_t lineLength;
 
 	if(serverConfig != NULL){
 		while(!feof(serverConfig)){
 
-			fgets(line, sizeof(line), serverConfig);
+			fgets(lineFeed, sizeof(lineFeed), serverConfig);
+			line = lineFeed;
+			lineLength = strlen(line);
 
+			// Remove new line and carriage return
+			if(line[lineLength-1] == '\n'){
+				line[--lineLength] = '\0';
+			}
+			if(line[lineLength-1] == '\r'){
+				line[--lineLength] = '\0';
+			}
 			// Remove any comments from the line
 			char *commentPos = strstr(line, "//");
 			if(commentPos != NULL){
-				commentPos = '\0';
+				lineLength -= commentPos-line;
+				*commentPos = '\0';
 			}
-
-			if(strlen(line) > 7){
-				substringHelper(compare, line, 0, 5);
-				if(strcmp(compare, "ip = ") == 0){
-					substringHelper(lineData, line, 5, strlen(line) - 6);
-					if(strlen(lineData) <= 39){
-						strcpy(server->ip, lineData);
-					}
+			// Remove any indentations from the line, as well as any trailing spaces and tabs
+			unsigned char doneFront = 0, doneEnd = 0;
+			size_t newOffset = 0;
+			size_t i;
+			for(i = 0; (i < lineLength && !doneFront && !doneEnd); i++){
+				if(!doneFront && line[i] != '\t' && line[i] != ' '){
+					newOffset = i;
+					doneFront = 1;
 				}
-				substringHelper(compare, line, 0, 7);
-				if(strcmp(compare, "port = ") == 0){
-					substringHelper(lineData, line, 7, strlen(line) - 7);
-					server->port = strtol(lineData, NULL, 10);
+				if(!doneEnd && i > 1 && i < lineLength && line[lineLength-i] != '\t' && line[lineLength-i] != ' '){
+					lineLength -= i-1;
+					line[lineLength] = '\0';
+					doneEnd = 1;
 				}
+			}
+			line += newOffset;
+			lineLength -= newOffset;
 
+			if(lineLength > 7){
+				// IP
+				if(strncpy(compare, line, 5) && (compare[5] = '\0') == 0 && strcmp(compare, "ip = ") == 0){
+					strncpy(server->ip, line+5, 40);
+
+				// Port
+				}else if(strncpy(compare, line, 7) && (compare[7] = '\0') == 0 && strcmp(compare, "port = ") == 0){
+					server->port = strtol(line+7, NULL, 0);
+
+				}
 			}
 
 		}
@@ -76,12 +86,12 @@ int loadConfig(socketServer *server, const int argc, const char *argv[]){
 
 }
 
-void handleBufferTCP(socketServer *server, unsigned int socketID){
+void handleBufferTCP(socketServer *server, size_t socketID){
 	printf("Data received over TCP: %s\n", server->lastBuffer);
 	ssSendDataTCP(server, socketID, "Data received over TCP successfully. You should get this.\n");
 }
 
-void handleDisconnectTCP(socketServer *server, unsigned int socketID){
+void handleDisconnectTCP(socketServer *server, size_t socketID){
 	printf("Closing TCP connection with socket #%i.\n", *((SOCKET*)cvGet(&server->connectedSockets, socketID)));
 }
 

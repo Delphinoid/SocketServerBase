@@ -16,7 +16,8 @@ void ssReportError(const char *failedFunction, int errorCode){
 	       failedFunction, errorCode);
 }
 
-int ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[], int (*loadConfig)(socketServer*, const int, const char**)){
+unsigned char ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[],
+                     unsigned char (*loadConfig)(socketServer*, const int, const char**)){
 
 	printf("Initializing socket...\n");
 
@@ -101,7 +102,7 @@ int ssInit(socketServer *server, int type, int protocol, const int argc, const c
 }
 
 #ifdef _WIN32
-	int ssStartup(){
+	unsigned char ssStartup(){
 		/* Initialize Winsock */
 		WSADATA wsaData;
 		int initError = WSAStartup(WINSOCK_VERSION, &wsaData);

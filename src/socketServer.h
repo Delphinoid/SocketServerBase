@@ -9,7 +9,7 @@
 	#include <ws2tcpip.h>
 	#define lastErrorID WSAGetLastError()
 	#define WINSOCK_VERSION MAKEWORD(2, 2)
-	int  ssStartup();
+	unsigned char ssStartup();
 	void ssCleanup();
 #else
 	#include <sys/socket.h>
@@ -50,6 +50,7 @@ typedef struct {
 int  inet_pton(int af, const char *src, char *dst);
 int  ssGetAddressFamily(const char *ip);
 void ssReportError(const char *failedFunction, int errorCode);
-int  ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[], int (*loadConfig)(socketServer*, const int, const char**));
+unsigned char ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[],
+                     unsigned char (*loadConfig)(socketServer*, const int, const char**));
 
 #endif

@@ -3,8 +3,8 @@
 
 #include "socketServer.h"
 
-void ssSendDataTCP(socketServer *server, unsigned int clientID, const char *msg);
-void ssHandleConnectionsTCP(socketServer *server, void (*handleBuffer)(socketServer*, unsigned int), void (*handleDisconnect)(socketServer*, unsigned int));
+void ssSendDataTCP(socketServer *server, size_t clientID, const char *msg);
+void ssHandleConnectionsTCP(socketServer *server, void (*handleBuffer)(socketServer*, size_t), void (*handleDisconnect)(socketServer*, size_t));
 void ssShutdownTCP(socketServer *server);
 
 #endif
