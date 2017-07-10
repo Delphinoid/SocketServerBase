@@ -56,6 +56,6 @@ typedef struct {
 void ssReportError(const char *failedFunction, int errorCode);
 ssSocket *ssMasterSocket(socketServer *server);
 unsigned char ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[],
-                     unsigned char (*ssLoadConfig)(char(*)[40], uint16_t*, const int, const char**));
+                     unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**));
 
 #endif

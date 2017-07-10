@@ -25,8 +25,8 @@ void ssDisconnectSocketTCP(socketServer *server, size_t socketID){
 }
 
 void ssHandleConnectionsTCP(socketServer *server,
-                            void (*handleBuffer)(socketServer*, size_t),
-                            void (*handleDisconnect)(socketServer*, size_t)){
+                            void (*ssHandleBufferTCP)(socketServer*, size_t),
+                            void (*ssHandleDisconnectTCP)(socketServer*, size_t)){
 
 	// Fill and perform operations on a temporary fd_set, as select() may modify it
 	fd_set socketSet;
@@ -76,15 +76,15 @@ void ssHandleConnectionsTCP(socketServer *server,
 					if(server->recvBytes == -1){  // Error encountered, disconnect problematic socket
 
 						ssReportError("recv()", lastErrorID);
-						(*handleDisconnect)(server, i);
+						(*ssHandleDisconnectTCP)(server, i);
 
 					}else if(server->recvBytes == 0){  // If the buffer is empty, the connection has closed
 
-						(*handleDisconnect)(server, i);
+						(*ssHandleDisconnectTCP)(server, i);
 
 					}else{  // Data received
 
-						(*handleBuffer)(server, i);  // Do something with the received data
+						(*ssHandleBufferTCP)(server, i);  // Do something with the received data
 
 					}
 

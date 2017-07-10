@@ -12,7 +12,7 @@ HANDLE tcpThreadID;
 
 const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 
-unsigned char ssLoadConfig(char (*ip)[40], uint16_t *port, const int argc, const char *argv[]){
+unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const char *argv[]){
 
 	char *cfgPath = (char*)argv[0];
 	cfgPath[strrchr(cfgPath, '\\') - cfgPath + 1] = '\0';  // Removes program name (everything after the last backslash) from the path
@@ -90,9 +90,9 @@ unsigned char ssLoadConfig(char (*ip)[40], uint16_t *port, const int argc, const
 
 }
 
-void handleBufferTCP(socketServer *server, size_t socketID){
+void ssHandleBufferTCP(socketServer *server, size_t socketID){
 	ssSocket *socket = (ssSocket *)cvGet(&server->connectedSockets, socketID);
-	char recvIP[40];
+	char recvIP[45];
 	inet_ntop(socket->details.ss_family,
 	          (socket->details.ss_family == AF_INET ?
 	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
@@ -103,9 +103,9 @@ void handleBufferTCP(socketServer *server, size_t socketID){
 	ssSendDataTCP(server, socketID, "Data received over TCP successfully. You should get this.\n");
 }
 
-void handleDisconnectTCP(socketServer *server, size_t socketID){
+void ssHandleDisconnectTCP(socketServer *server, size_t socketID){
 	ssSocket *socket = (ssSocket *)cvGet(&server->connectedSockets, socketID);
-	char recvIP[40];
+	char recvIP[45];
 	inet_ntop(socket->details.ss_family,
 	          (socket->details.ss_family == AF_INET ?
 	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
@@ -116,8 +116,8 @@ void handleDisconnectTCP(socketServer *server, size_t socketID){
 	ssDisconnectSocketTCP(server, socketID);
 }
 
-void handleBufferUDP(socketServer *server, ssSocket *socket){
-	char recvIP[40];
+void ssHandleBufferUDP(socketServer *server, ssSocket *socket){
+	char recvIP[45];
 	inet_ntop(socket->details.ss_family,
 	          (socket->details.ss_family == AF_INET ?
 	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
@@ -128,7 +128,7 @@ void handleBufferUDP(socketServer *server, ssSocket *socket){
 	ssSendDataUDP(server, socket, "Data received over UDP successfully. You might get this.\n");
 }
 
-void handleDisconnectUDP(socketServer *server){
+void ssHandleDisconnectUDP(socketServer *server){
 	// Check for timeouts, if applicable
 }
 
@@ -141,7 +141,7 @@ void cleanup(){
 
 DWORD WINAPI handleTCP(){
 	while(1)
-		ssHandleConnectionsTCP(&testServerTCP, &handleBufferTCP, &handleDisconnectTCP);
+		ssHandleConnectionsTCP(&testServerTCP, &ssHandleBufferTCP, &ssHandleDisconnectTCP);
 }
 
 int main(int argc, char *argv[]){
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]){
 	atexit(cleanup);
 
 	while(1)
-		ssHandleConnectionsUDP(&testServerUDP, &handleBufferUDP, &handleDisconnectUDP);
+		ssHandleConnectionsUDP(&testServerUDP, &ssHandleBufferUDP, &ssHandleDisconnectUDP);
 
 	return 0;
 

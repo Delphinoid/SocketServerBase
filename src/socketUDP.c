@@ -17,8 +17,8 @@ void ssSendDataUDP(socketServer *server, ssSocket *socket, const char *msg){
 }
 
 void ssHandleConnectionsUDP(socketServer *server,
-                            void (*handleBuffer)(socketServer*, ssSocket*),
-                            void (*handleTimeout)(socketServer*)){
+                            void (*ssHandleBufferUDP)(socketServer*, ssSocket*),
+                            void (*ssHandleTimeoutUDP)(socketServer*)){
 
 	// Create ssSocket struct for the socket we are receiving data from
 	ssSocket client;
@@ -33,7 +33,7 @@ void ssHandleConnectionsUDP(socketServer *server,
 			ssReportError("recvfrom()", lastErrorID);
 		}
 	}else if(server->recvBytes > 0){  // Data received successfully
-		(*handleBuffer)(server, &client);  // Do something with the received data
+		(*ssHandleBufferUDP)(server, &client);  // Do something with the received data
 	}
 
 }

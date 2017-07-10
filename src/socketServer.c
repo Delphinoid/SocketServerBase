@@ -23,12 +23,12 @@ ssSocket *ssMasterSocket(socketServer *server){
 }
 
 unsigned char ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[],
-                     unsigned char (*ssLoadConfig)(char(*)[40], uint16_t*, const int, const char**)){
+                     unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
 
 	printf("Initializing socket...\n");
 
 	/* Initialize server IP, port, type and protocol, then load the server config */
-	char ip[40]; ip[0] = '\0';
+	char ip[45]; ip[0] = '\0';
 	int af;
 	uint16_t port = DEFAULT_PORT;
 	server->type = type;
