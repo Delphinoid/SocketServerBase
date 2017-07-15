@@ -91,41 +91,43 @@ unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const
 }
 
 void ssHandleBufferTCP(socketServer *server, size_t socketID){
-	ssSocket *socket = (ssSocket *)cvGet(&server->connectedSockets, socketID);
+	socketHandle  handle  = *ssGetSocketHandle(server, socketID);
+	socketDetails details = *ssGetSocketDetails(server, socketID);
 	char recvIP[45];
-	inet_ntop(socket->details.ss_family,
-	          (socket->details.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&socket->details)->sin6_addr)),
+	inet_ntop(details.address.ss_family,
+	          (details.address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
 	          &recvIP[0],
 	          sizeof(recvIP));
-	printf("Data received over TCP from %s (socket #%i): %s\n", recvIP, socket->handle.fd, server->lastBuffer);
+	printf("Data received over TCP from %s (socket #%i): %s\n", recvIP, handle.fd, server->lastBuffer);
 	ssSendDataTCP(server, socketID, "Data received over TCP successfully. You should get this.\n");
 }
 
 void ssHandleDisconnectTCP(socketServer *server, size_t socketID){
-	ssSocket *socket = (ssSocket *)cvGet(&server->connectedSockets, socketID);
+	socketHandle  handle  = *ssGetSocketHandle(server, socketID);
+	socketDetails details = *ssGetSocketDetails(server, socketID);
 	char recvIP[45];
-	inet_ntop(socket->details.ss_family,
-	          (socket->details.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&socket->details)->sin6_addr)),
+	inet_ntop(details.address.ss_family,
+	          (details.address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
 	          &recvIP[0],
 	          sizeof(recvIP));
-	printf("Closing TCP connection with %s (socket #%i).\n", recvIP, socket->handle.fd);
+	printf("Closing TCP connection with %s (socket #%i).\n", recvIP, handle.fd);
 	ssDisconnectSocketTCP(server, socketID);
 }
 
-void ssHandleBufferUDP(socketServer *server, ssSocket *socket){
+void ssHandleBufferUDP(socketServer *server, socketDetails details){
 	char recvIP[45];
-	inet_ntop(socket->details.ss_family,
-	          (socket->details.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&socket->details)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&socket->details)->sin6_addr)),
+	inet_ntop(details.address.ss_family,
+	          (details.address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
 	          &recvIP[0],
 	          sizeof(recvIP));
 	printf("Data received over UDP from %s: %s\n", recvIP, server->lastBuffer);
-	ssSendDataUDP(server, socket, "Data received over UDP successfully. You might get this.\n");
+	ssSendDataUDP(server, details, "Data received over UDP successfully. You might get this.\n");
 }
 
 void ssHandleDisconnectUDP(socketServer *server){
