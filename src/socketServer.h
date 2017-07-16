@@ -8,25 +8,14 @@
 	void ssCleanup();
 #endif
 
-#ifndef DEFAULT_ADDRESS_FAMILY
-	#define DEFAULT_ADDRESS_FAMILY AF_INET6
-#endif
-#ifndef DEFAULT_PORT
-	#define DEFAULT_PORT 7249
-#endif
-#ifndef MAX_BUFFER_SIZE
-	#define MAX_BUFFER_SIZE 1024
-#endif
-#ifndef MAX_CONNECTIONS
-	#define MAX_CONNECTIONS 201
-#endif
-
 typedef struct {
 	int type;
 	int protocol;
+	int recvBytesTCP;  // Length of the last message recieved over TCP
+	int recvBytesUDP;  // Length of the last message recieved over UDP
+	char lastBufferTCP[SOCK_MAX_BUFFER_SIZE];  // Last message received from a client over TCP. Buffers are capped at MAX_BUFFER_SIZE bytes
+	char lastBufferUDP[SOCK_MAX_BUFFER_SIZE];  // Last message received from a client over UDP. Buffers are capped at MAX_BUFFER_SIZE bytes
 	socketConnectionHandler connectionHandler;
-	int recvBytes;  // Length of the last message recieved
-	char lastBuffer[MAX_BUFFER_SIZE];  // Last message received from a client. Buffers are capped at MAX_BUFFER_SIZE bytes
 } socketServer;
 
 // Socket functions shared by TCP and UDP sockets
@@ -35,5 +24,7 @@ unsigned char ssInit(socketServer *server, int type, int protocol, const int arg
                      unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**));
 socketHandle  *ssGetSocketHandle(socketServer *server, size_t socketID);
 socketDetails *ssGetSocketDetails(socketServer *server, size_t socketID);
+unsigned char ssSocketTimedOut(socketServer *server, size_t socketID, uint32_t currentTick);
+void ssCheckTimeouts(socketServer *server, uint32_t currentTick);
 
 #endif

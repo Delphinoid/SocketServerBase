@@ -1,14 +1,11 @@
+#define WIN32_LEAN_AND_MEAN
 #include "socketTCP.h"
 #include "socketUDP.h"
-#include <windows.h>
 #include <string.h>
 #include <stdio.h>
 
-#define MAX_SOCKETS 101
-
 socketServer testServerTCP;
 socketServer testServerUDP;
-HANDLE tcpThreadID;
 
 const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 
@@ -90,60 +87,105 @@ unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const
 
 }
 
-void ssHandleBufferTCP(socketServer *server, size_t socketID){
-	socketHandle  handle  = *ssGetSocketHandle(server, socketID);
-	socketDetails details = *ssGetSocketDetails(server, socketID);
-	char recvIP[45];
-	inet_ntop(details.address.ss_family,
-	          (details.address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
-	          &recvIP[0],
-	          sizeof(recvIP));
-	printf("Data received over TCP from %s (socket #%i): %s\n", recvIP, handle.fd, server->lastBuffer);
-	ssSendDataTCP(server, socketID, "Data received over TCP successfully. You should get this.\n");
+void ssHandleConnectTCP(socketServer *server, socketHandle *handle, socketDetails *details){
+	char IP[45];
+	inet_ntop(details->address.ss_family,
+	          (details->address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+	          &IP[0],
+	          sizeof(IP));
+	if(scdAddSocket(&server->connectionHandler, handle, details)){
+		printf("Accepted TCP connection from %s (socket #%u)\n", IP, details->id);
+	}else{
+		printf("Error: could not accept TCP connection from %s: server is full.\n", IP);
+	}
 }
 
-void ssHandleDisconnectTCP(socketServer *server, size_t socketID){
-	socketHandle  handle  = *ssGetSocketHandle(server, socketID);
+void ssHandleBufferTCP(socketServer *server, size_t socketID){
 	socketDetails details = *ssGetSocketDetails(server, socketID);
-	char recvIP[45];
+	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?
 	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
 	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
-	          &recvIP[0],
-	          sizeof(recvIP));
-	printf("Closing TCP connection with %s (socket #%i).\n", recvIP, handle.fd);
+	          &IP[0],
+	          sizeof(IP));
+	printf("Data received over TCP from %s (socket #%u): %s\n", IP, details.id, server->lastBufferTCP);
+	ssSendDataTCP(server, ssGetSocketHandle(server, socketID)->fd, "Data received over TCP successfully. You should get this.\n");
+}
+
+void ssHandleDisconnectTCP(socketServer *server, size_t socketID, int reason){
+	socketDetails details = *ssGetSocketDetails(server, socketID);
+	char IP[45];
+	inet_ntop(details.address.ss_family,
+	          (details.address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
+	          &IP[0],
+	          sizeof(IP));
+	printf("Closing TCP connection with %s (socket #%u).\n", IP, details.id);
 	ssDisconnectSocketTCP(server, socketID);
 }
 
-void ssHandleBufferUDP(socketServer *server, socketDetails details){
-	char recvIP[45];
+void ssHandleConnectUDP(socketServer *server, socketHandle *handle, socketDetails *details){
+	char IP[45];
+	inet_ntop(details->address.ss_family,
+	          (details->address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+	          &IP[0],
+	          sizeof(IP));
+	if(scdAddSocket(&server->connectionHandler, handle, details)){
+		printf("Accepted UDP connection from %s (socket #%u)\n", IP, details->id);
+	}else{
+		printf("Error: could not accept UDP connection from %s: server is full.\n", IP);
+	}
+}
+
+void ssHandleBufferAbstractUDP(socketServer *server, void *socketID){
+	socketDetails details = *ssGetSocketDetails(server, *((size_t *)socketID));
+	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?
 	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
 	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
-	          &recvIP[0],
-	          sizeof(recvIP));
-	printf("Data received over UDP from %s: %s\n", recvIP, server->lastBuffer);
+	          &IP[0],
+	          sizeof(IP));
+	printf("Data received over UDP from %s (socket #%u): %s\n", IP, details.id, server->lastBufferUDP);
 	ssSendDataUDP(server, details, "Data received over UDP successfully. You might get this.\n");
 }
 
-void ssHandleDisconnectUDP(socketServer *server){
-	// Check for timeouts, if applicable
+void ssHandleBufferUDP(socketServer *server, void *socketAddress){
+	socketDetails details = *((socketDetails *)socketAddress);
+	char IP[45];
+	inet_ntop(details.address.ss_family,
+	          (details.address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
+	          &IP[0],
+	          sizeof(IP));
+	printf("Data received over UDP from %s: %s\n", IP, server->lastBufferUDP);
+	ssSendDataUDP(server, details, "Data received over UDP successfully. You might get this.\n");
+}
+
+void ssHandleDisconnectUDP(socketServer *server, size_t socketID, int reason){
+	socketDetails details = *ssGetSocketDetails(server, socketID);
+	char IP[45];
+	inet_ntop(details.address.ss_family,
+	          (details.address.ss_family == AF_INET ?
+	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
+	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
+	          &IP[0],
+	          sizeof(IP));
+	printf("Closing UDP connection with %s (socket #%u).\n", IP, details.id);
+	ssDisconnectSocketUDP(server, socketID);
 }
 
 void cleanup(){
 	ssShutdownTCP(&testServerTCP);
 	ssShutdownUDP(&testServerUDP);
-	ssCleanup();  // Terminate Winsock
-	CloseHandle(tcpThreadID);
-}
-
-DWORD WINAPI handleTCP(){
-	while(1)
-		ssHandleConnectionsTCP(&testServerTCP, &ssHandleBufferTCP, &ssHandleDisconnectTCP);
+	ssCleanup();
 }
 
 int main(int argc, char *argv[]){
@@ -153,11 +195,14 @@ int main(int argc, char *argv[]){
 	   !ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, (const int)argc, (const char **)argv, &ssLoadConfig))
 		return 1;
 
-	tcpThreadID = CreateThread(NULL, 0, handleTCP, NULL, 0, NULL);
 	atexit(cleanup);
 
-	while(1)
-		ssHandleConnectionsUDP(&testServerUDP, &ssHandleBufferUDP, &ssHandleDisconnectUDP);
+	unsigned char flagsUDP = SOCK_ABSTRACT_HANDLE;
+	unsigned char flagsTCP = 0;
+	while(1){
+		ssHandleConnectionsUDP(&testServerUDP, 0, &ssHandleConnectUDP, &ssHandleBufferAbstractUDP, &ssHandleDisconnectUDP, flagsUDP);
+		ssHandleConnectionsTCP(&testServerTCP, 0, &ssHandleConnectTCP, &ssHandleBufferTCP, &ssHandleDisconnectTCP, flagsTCP);
+	}
 
 	return 0;
 

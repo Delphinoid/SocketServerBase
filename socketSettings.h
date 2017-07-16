@@ -1,0 +1,7 @@
+#ifndef SOCKETSETTINGS_H
+#define SOCKETSETTINGS_H
+
+#define SOCK_MAX_SOCKETS 201
+#define SOCK_USE_POLL
+
+#endif

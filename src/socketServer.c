@@ -21,12 +21,12 @@ void ssReportError(const char *failedFunction, int errorCode){
 unsigned char ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[],
                      unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
 
-	printf("Initializing server...\n");
+	puts("Initializing server...");
 
 	/* Initialize server IP, port, type and protocol, then load the server config */
 	char ip[45]; ip[0] = '\0';
 	int af;
-	uint16_t port = DEFAULT_PORT;
+	uint16_t port = SOCK_DEFAULT_PORT;
 	server->type = type;
 	server->protocol = protocol;
 	if(ssLoadConfig != NULL){
@@ -41,18 +41,33 @@ unsigned char ssInit(socketServer *server, int type, int protocol, const int arg
 	   protocol = IPPROTO_TCP, which specifies to use TCP or IPPROTO_UDP, which specifies to use UDP
 	*/
 	struct pollfd masterHandle;
-	socketDetails masterDetails;
 	af = ssGetAddressFamily(ip);
 	if(af == -1){
-		af = DEFAULT_ADDRESS_FAMILY;
+		af = SOCK_DEFAULT_ADDRESS_FAMILY;
 	}
 	masterHandle.fd = socket(af, server->type, server->protocol);
 	if(masterHandle.fd == INVALID_SOCKET){  // If socket() failed, abort
 		ssReportError("socket()", lastErrorID);
 		return 0;
 	}
+	masterHandle.events = POLLWRNORM | POLLWRBAND;
+	masterHandle.revents = 0;
+
+	/* If SOCK_POLL_TIMEOUT isn't negative, we want a timeout for recfrom() */
+	if(SOCK_POLL_TIMEOUT > 0){
+		// Set SO_RCVTIMEO
+		unsigned long timeout = SOCK_POLL_TIMEOUT;
+		if(setsockopt(masterHandle.fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) == SOCKET_ERROR){
+			ssReportError("setsockopt()", lastErrorID);
+			return 0;
+		}
+	}else if(SOCK_POLL_TIMEOUT == 0){
+		unsigned long mode = 1;
+		ioctl(masterHandle.fd, FIONBIO, &mode);
+	}
 
 	/* Bind the master socket to the host address */
+	socketDetails masterDetails;
 	if(af == AF_INET){
 
 		// Create the sockaddr_in structure using the master socket's address family and the supplied IP / port
@@ -95,7 +110,7 @@ unsigned char ssInit(socketServer *server, int type, int protocol, const int arg
 	}
 
 	/* Initialize the connection handler */
-	if(!scdInit(&server->connectionHandler, 201, masterHandle, masterDetails)){
+	if(!scdInit(&server->connectionHandler, SOCK_MAX_SOCKETS, &masterHandle, &masterDetails)){
 		puts("Error: the socket connection handler could not be initialized.\n");
 		return 0;
 	}
@@ -111,6 +126,29 @@ socketHandle *ssGetSocketHandle(socketServer *server, size_t socketID){
 
 socketDetails *ssGetSocketDetails(socketServer *server, size_t socketID){
 	return &server->connectionHandler.details[server->connectionHandler.idLinks[socketID]];
+}
+
+unsigned char ssSocketTimedOut(socketServer *server, size_t socketID, uint32_t currentTick){
+	if(socketID > 0){
+		return currentTick - ssGetSocketDetails(server, socketID)->lastUpdateTick >= SOCK_CONNECTION_TIMEOUT;
+	}
+	return 0;
+}
+
+void ssCheckTimeouts(socketServer *server, uint32_t currentTick){
+	/* This function is slow and mostly unnecessary, so it should be avoided if at all possible! */
+	size_t i;
+	for(i = 1; i < server->connectionHandler.size; i++){
+		// Disconnect the socket at index i if it has timed out
+		if(ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
+			// UDP sockets use the same handle as the master socket, so they won't be closed
+			if(server->connectionHandler.handles[i].fd != server->connectionHandler.handles[0].fd){
+				closesocket(server->connectionHandler.handles[i].fd);
+			}
+			scdRemoveSocket(&server->connectionHandler, server->connectionHandler.details[i].id);
+			i--;
+		}
+	}
 }
 
 #ifdef _WIN32

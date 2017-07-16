@@ -56,14 +56,14 @@ unsigned char scdResize(socketConnectionHandler *scd, size_t capacity){
 
 }
 
-unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle handle, socketDetails details){
+unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle *handle, socketDetails *details){
 
 	if(scd->size < scd->capacity){
 
 		// Link the handle and details arrays to the used ID array
-		scd->handles[scd->size] = handle;
-		scd->details[scd->size] = details;
-		scd->details[scd->size].id = scd->idStack[scd->size];
+		scd->handles[scd->size] = *handle;
+		details->id = scd->idStack[scd->size];
+		scd->details[scd->size] = *details;
 		scd->idLinks[scd->idStack[scd->size]] = scd->size;
 		scd->idStack[scd->size] = 0;
 		scd->size++;
@@ -81,16 +81,18 @@ unsigned char scdRemoveSocket(socketConnectionHandler *scd, size_t socketID){
 	// Don't touch element 0 (the master socket)
 	if(socketID > 0){
 
-		// Shift everything after this element over
+		scd->size--;
+
+		// Shift everything after this element over and adjust their links
 		size_t i;
 		for(i = scd->idLinks[socketID]; i < scd->size; i++){
-			scd->handles[i-1] = scd->handles[i];
-			scd->details[i-1] = scd->details[i];
-			scd->idLinks[scd->details[i].id]--;
+			scd->handles[i] = scd->handles[i+1];
+			scd->details[i] = scd->details[i+1];
+			scd->idLinks[scd->details[i+1].id]--;
 		}
 
 		// Free the socket ID
-		scd->idStack[--scd->size] = socketID;
+		scd->idStack[scd->size] = socketID;
 		scd->idLinks[socketID] = 0;
 		return 1;
 
@@ -100,7 +102,7 @@ unsigned char scdRemoveSocket(socketConnectionHandler *scd, size_t socketID){
 
 }
 
-unsigned char scdInit(socketConnectionHandler *scd, size_t capacity, socketHandle masterHandle, socketDetails masterDetails){
+unsigned char scdInit(socketConnectionHandler *scd, size_t capacity, socketHandle *masterHandle, socketDetails *masterDetails){
 
 	// Initialize everything
 	scd->size = 0;
@@ -114,8 +116,7 @@ unsigned char scdInit(socketConnectionHandler *scd, size_t capacity, socketHandl
 	}
 
 	// Add the master socket
-	scdAddSocket(scd, masterHandle, masterDetails);
-	return 1;
+	return scdAddSocket(scd, masterHandle, masterDetails);
 
 }
 

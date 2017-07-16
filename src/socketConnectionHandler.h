@@ -8,7 +8,7 @@
 typedef struct {
 	size_t id;
 	struct sockaddr_storage address;
-	uint32_t lastUpdate;
+	uint32_t lastUpdateTick;
 } socketDetails;
 
 typedef struct {
@@ -21,9 +21,9 @@ typedef struct {
 } socketConnectionHandler;
 
 unsigned char scdResize(socketConnectionHandler *scd, size_t capacity);
-unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle handle, socketDetails details);
+unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle *handle, socketDetails *details);
 unsigned char scdRemoveSocket(socketConnectionHandler *scd, size_t socketID);
-unsigned char scdInit(socketConnectionHandler *scd, size_t capacity, socketHandle masterHandle, socketDetails masterDetails);
+unsigned char scdInit(socketConnectionHandler *scd, size_t capacity, socketHandle *masterHandle, socketDetails *masterDetails);
 void scdDelete(socketConnectionHandler *scd);
 
 #endif
