@@ -1,7 +1,7 @@
 #include "socketUDP.h"
 
 void ssSendDataUDP(socketServer *server, socketDetails details, const char *msg){
-	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details.address, sizeof(details.address)) < 0){
+	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details.address, details.bytes) < 0){
 		ssReportError("sendto()", lastErrorID);
 	}
 }
@@ -13,7 +13,7 @@ void ssDisconnectSocketUDP(socketServer *server, size_t socketID){
 void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
                             void (*ssHandleConnectUDP)(socketServer*, socketHandle*, socketDetails*),
                             void (*ssHandleBufferUDP)(socketServer*, void*),
-                            void (*ssHandleDisconnectUDP)(socketServer*, size_t, int),
+                            void (*ssHandleDisconnectUDP)(socketServer*, size_t, char),
                             unsigned char flags){
 
 	// Keep receiving data while the buffer is not empty
@@ -21,15 +21,14 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 
 		// Create ssSocket struct for the socket we are receiving data from
 		socketDetails clientDetails;
-		memset(&clientDetails, 0, sizeof(clientDetails));
-		int socketDetailsSize = sizeof(clientDetails.address);
+		clientDetails.bytes = sizeof(clientDetails.address);
 
 		// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer
-		server->recvBytesUDP = recvfrom(ssGetSocketHandle(server, 0)->fd, server->lastBufferUDP, SOCK_MAX_BUFFER_SIZE, 0,
-		                                (struct sockaddr *)&clientDetails.address, &socketDetailsSize);
+		server->recvBytes = recvfrom(ssGetSocketHandle(server, 0)->fd, server->lastBuffer, SOCK_MAX_BUFFER_SIZE, 0,
+		                             (struct sockaddr *)&clientDetails.address, &clientDetails.bytes);
 
 		// Check if anything was received
-		if(server->recvBytesUDP > 0){
+		if(server->recvBytes > 0){
 
 			// If the SOCK_ABSTRACT flag was specified, it's a little complex
 			if((flags & SOCK_ABSTRACT_HANDLE) > 0){
@@ -44,7 +43,7 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 						i--;
 
 					// Check if the addresses are the same for the two sockets (includes port)
-					}else if(memcmp(&clientDetails.address, &server->connectionHandler.details[i].address, sizeof(clientDetails.address))){
+					}else if(memcmp(&clientDetails.address, &server->connectionHandler.details[i].address, clientDetails.bytes)){
 						socketID = server->connectionHandler.details[i].id;
 					}
 

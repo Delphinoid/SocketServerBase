@@ -11,10 +11,8 @@
 typedef struct {
 	int type;
 	int protocol;
-	int recvBytesTCP;  // Length of the last message recieved over TCP
-	int recvBytesUDP;  // Length of the last message recieved over UDP
-	char lastBufferTCP[SOCK_MAX_BUFFER_SIZE];  // Last message received from a client over TCP. Buffers are capped at MAX_BUFFER_SIZE bytes
-	char lastBufferUDP[SOCK_MAX_BUFFER_SIZE];  // Last message received from a client over UDP. Buffers are capped at MAX_BUFFER_SIZE bytes
+	int recvBytes;  // Length of the last message recieved
+	char lastBuffer[SOCK_MAX_BUFFER_SIZE];  // Last message received from a client. Buffers are capped at MAX_BUFFER_SIZE bytes
 	socketConnectionHandler connectionHandler;
 } socketServer;
 

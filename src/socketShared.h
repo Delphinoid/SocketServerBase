@@ -33,11 +33,12 @@
 #endif
 
 // Flags passed into ssHandleConnections functions
-#define SOCK_UDP             0x0001  // Currently not used
-#define SOCK_TCP             0x0002  // Currently not used
-#define SOCK_VERBOSE         0x0004  // Currently not used
-#define SOCK_MANAGE_TIMEOUTS 0x0008
-#define SOCK_ABSTRACT_HANDLE 0x0010
+#define SOCK_UDP              0x0001  // Currently not used
+#define SOCK_TCP              0x0002  // Currently not used
+#define SOCK_VERBOSE          0x0004  // Currently not used
+#define SOCK_MANAGE_TIMEOUTS  0x0008
+#define SOCK_ABSTRACT_HANDLE  0x0010
+#define SOCK_READ_FULL_BUFFER 0x0020  // Currently not used
 
 // Types of disconnects passed into ssHandleDisconnect functions
 #define SOCK_ERROR -1

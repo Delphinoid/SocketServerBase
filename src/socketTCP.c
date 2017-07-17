@@ -1,8 +1,8 @@
 #include "socketTCP.h"
 #include <stdio.h>
 
-void ssSendDataTCP(socketServer *server, int handle, const char *msg){
-	if(send(handle, msg, strlen(msg) + 1, 0) < 0){
+void ssSendDataTCP(socketHandle *clientHandle, const char *msg){
+	if(send(clientHandle->fd, msg, strlen(msg) + 1, 0) < 0){
 		ssReportError("send()", lastErrorID);
 	}
 }
@@ -15,7 +15,7 @@ void ssDisconnectSocketTCP(socketServer *server, size_t socketID){
 void ssHandleConnectionsTCP(socketServer *server, uint32_t currentTick,
                             void (*ssHandleConnectTCP)(socketServer*, socketHandle*, socketDetails*),
                             void (*ssHandleBufferTCP)(socketServer*, size_t),
-                            void (*ssHandleDisconnectTCP)(socketServer*, size_t, int),
+                            void (*ssHandleDisconnectTCP)(socketServer*, size_t, char),
                             unsigned char flags){
 
 	int changedSockets = pollFunc(server->connectionHandler.handles, server->connectionHandler.size, SOCK_POLL_TIMEOUT);
@@ -47,10 +47,9 @@ void ssHandleConnectionsTCP(socketServer *server, uint32_t currentTick,
 
 					socketHandle  clientHandle;
 					socketDetails clientDetails;
-					memset(&clientDetails, 0, sizeof(clientDetails));
-					int socketDetailsSize = sizeof(clientDetails.address);
+					clientDetails.bytes = sizeof(clientDetails.address);
 
-					clientHandle.fd = accept(ssGetSocketHandle(server, 0)->fd, (struct sockaddr *)&clientDetails.address, &socketDetailsSize);
+					clientHandle.fd = accept(ssGetSocketHandle(server, 0)->fd, (struct sockaddr *)&clientDetails.address, &clientDetails.bytes);
 
 					// Check if accept() was successful
 					if(clientHandle.fd != INVALID_SOCKET){
@@ -66,17 +65,17 @@ void ssHandleConnectionsTCP(socketServer *server, uint32_t currentTick,
 				}else{
 
 					// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer
-					server->recvBytesTCP = recv(server->connectionHandler.handles[i].fd, server->lastBufferTCP, SOCK_MAX_BUFFER_SIZE, 0);
+					server->recvBytes = recv(server->connectionHandler.handles[i].fd, server->lastBuffer, SOCK_MAX_BUFFER_SIZE, 0);
 
 					// Error encountered, disconnect problematic socket
-					if(server->recvBytesTCP == -1){
+					if(server->recvBytes == -1){
 
 						ssReportError("recv()", lastErrorID);
 						(*ssHandleDisconnectTCP)(server, server->connectionHandler.details[i].id, SOCK_ERROR);
 
 
 					// If the buffer is empty, the connection has closed
-					}else if(server->recvBytesTCP == 0){
+					}else if(server->recvBytes == 0){
 
 						(*ssHandleDisconnectTCP)(server, server->connectionHandler.details[i].id, SOCK_DISCONNECTED);
 

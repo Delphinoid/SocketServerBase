@@ -7,8 +7,9 @@
 
 typedef struct {
 	size_t id;
-	struct sockaddr_storage address;
 	uint32_t lastUpdateTick;
+	struct sockaddr_storage address;
+	int bytes;
 } socketDetails;
 
 typedef struct {
