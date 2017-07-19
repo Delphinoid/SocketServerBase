@@ -39,8 +39,8 @@ unsigned char scdResize(socketConnectionHandler *scd, size_t capacity){
 			return 0;
 		}
 
-		// Initialize the ID stack and used ID array, starting from size
-		size_t i = scd->size;
+		// Initialize the ID stack and used ID array, starting from the old capacity
+		size_t i = scd->capacity;
 		while(i < capacity){
 			scd->idStack[i] = i;
 			scd->idLinks[i] = 0;
