@@ -78,7 +78,7 @@
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
 	#define SOCKET int
-	#ifdef SOCK_POLL_SUPPORT_AVAILABLE
+	#ifdef SOCK_USE_POLL
 		#include <sys/poll.h>
 	#else
 		#define POLLIN     0x0001
