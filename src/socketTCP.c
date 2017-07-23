@@ -27,6 +27,7 @@ void ssHandleConnectionsTCP(socketServer *server, uint32_t currentTick,
 		size_t i;
 		for(i = 0; ((flags & SOCK_MANAGE_TIMEOUTS) > 0 || changedSockets > 0) && i < server->connectionHandler.size; i++){
 
+			size_t oldSize = server->connectionHandler.size;
 			socketHandle  currentHandle  = server->connectionHandler.handles[i];
 			socketDetails currentDetails = server->connectionHandler.details[i];
 
@@ -95,7 +96,17 @@ void ssHandleConnectionsTCP(socketServer *server, uint32_t currentTick,
 				if(server->connectionHandler.idLinks[currentDetails.id] != 0){
 					i = server->connectionHandler.idLinks[currentDetails.id];
 				}else{
-					i--;
+					if(oldSize > server->connectionHandler.size){
+						// Handled oddly because we're using unsigned integers
+						// oldSize is now the difference in size between oldSize and server->connectionHandler.size
+						oldSize -= server->connectionHandler.size;
+						if(oldSize >= i){
+							i = 1;
+						}else{
+							// May jump too far back, but this is a rare case anyway
+							i -= oldSize;
+						}
+					}
 				}
 			}
 

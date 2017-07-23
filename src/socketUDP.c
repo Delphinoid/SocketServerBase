@@ -38,6 +38,7 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 				size_t i;
 				for(i = 1; i < server->connectionHandler.size; i++){
 
+					size_t oldSize = server->connectionHandler.size;
 					socketDetails currentDetails = server->connectionHandler.details[i];
 
 					// Disconnect the socket at index i if it has timed out
@@ -57,7 +58,17 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 						if(server->connectionHandler.idLinks[currentDetails.id] != 0){
 							i = server->connectionHandler.idLinks[currentDetails.id];
 						}else{
-							i--;
+							if(oldSize > server->connectionHandler.size){
+								// Handled oddly because we're using unsigned integers
+								// oldSize is now the difference in size between oldSize and server->connectionHandler.size
+								oldSize -= server->connectionHandler.size;
+								if(oldSize >= i){
+									i = 1;
+								}else{
+									// May jump too far back, but this is a rare case anyway
+									i -= oldSize;
+								}
+							}
 						}
 					}
 
