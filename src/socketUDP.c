@@ -12,15 +12,16 @@ void ssDisconnectSocketUDP(socketServer *server, size_t socketID){
 
 void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
                             void (*ssHandleConnectUDP)(socketServer*, socketHandle*, socketDetails*),
-                            void (*ssHandleBufferUDP)(socketServer*, void*),
-                            void (*ssHandleDisconnectUDP)(socketServer*, size_t, char),
+                            void (*ssHandleBufferUDP)(socketServer*, socketDetails),
+                            void (*ssHandleDisconnectUDP)(socketServer*, socketDetails, char),
                             unsigned char flags){
 
 	// Keep receiving data while the buffer is not empty
-	while(1){
+	do{
 
 		// Create ssSocket struct for the socket we are receiving data from
 		socketDetails clientDetails;
+		clientDetails.id = 0;
 		clientDetails.bytes = sizeof(clientDetails.address);
 
 		// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer
@@ -32,43 +33,50 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 
 			// If the SOCK_ABSTRACT flag was specified, it's a little complex
 			if((flags & SOCK_ABSTRACT_HANDLE) > 0){
+
 				// Check if socket exists, and while we're at it disconnect any sockets that have timed out
-				size_t socketID = 0;
 				size_t i;
-				for(i = 1; ((flags & SOCK_MANAGE_TIMEOUTS) > 0 || socketID == 0) && i < server->connectionHandler.size; i++){
+				for(i = 1; i < server->connectionHandler.size; i++){
+
+					socketDetails currentDetails = server->connectionHandler.details[i];
 
 					// Disconnect the socket at index i if it has timed out
-					if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
-						(*ssHandleDisconnectUDP)(server, server->connectionHandler.details[i].id, SOCK_TIMED_OUT);
-						i--;
+					if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, currentDetails.id, currentTick)){
+						(*ssHandleDisconnectUDP)(server, currentDetails, SOCK_TIMED_OUT);
 
 					// Check if the addresses are the same for the two sockets (includes port)
-					}else if(memcmp(&clientDetails.address, &server->connectionHandler.details[i].address, clientDetails.bytes)){
-						socketID = server->connectionHandler.details[i].id;
+					}else if(clientDetails.id == 0 && memcmp(&clientDetails.address, &currentDetails.address, clientDetails.bytes)){
+						clientDetails.id = currentDetails.id;
+						if((flags & SOCK_MANAGE_TIMEOUTS) == 0){
+							break;
+						}
+					}
+
+					// If some sockets where shuffled (e.g. due to disconnects), reposition i
+					if(currentDetails.id != server->connectionHandler.details[i].id){
+						if(server->connectionHandler.idLinks[currentDetails.id] != 0){
+							i = server->connectionHandler.idLinks[currentDetails.id];
+						}else{
+							i--;
+						}
 					}
 
 				}
 
 				// If the socket was not found (we currently do not have a session with it), add it to the connection handler
-				if(socketID == 0){
+				if(clientDetails.id == 0){
 					socketHandle clientHandle;
 					clientHandle.fd = server->connectionHandler.handles[0].fd;
 					(*ssHandleConnectUDP)(server, &clientHandle, &clientDetails);
-					socketID = clientDetails.id;
 				}
 
-				// Do something with the received data
-				(*ssHandleBufferUDP)(server, &socketID);
-
-
-			// If the SOCK_ABSTRACT flag was not specified, just send the socket details into ssHandleBufferUDP()
-			}else{
-				// Do something with the received data
-				(*ssHandleBufferUDP)(server, &clientDetails);
 			}
 
-		// Error was encountered, abort the loop
+			// Do something with the received data
+			(*ssHandleBufferUDP)(server, clientDetails);
+
 		}else{
+			// Error was encountered, abort the loop
 			int tempLastErrorID = lastErrorID;
 			// Don't bother reporting the error if it's EWOULDBLOCK or ECONNRESET, as it can be ignored here
 			if(tempLastErrorID != EWOULDBLOCK && tempLastErrorID != ECONNRESET){
@@ -77,7 +85,7 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 			break;
 		}
 
-	}
+	}while((flags & SOCK_READ_FULL_QUEUE) > 0);
 
 }
 

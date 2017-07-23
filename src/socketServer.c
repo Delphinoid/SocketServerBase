@@ -50,7 +50,7 @@ unsigned char ssInit(socketServer *server, int type, int protocol, const int arg
 		ssReportError("socket()", lastErrorID);
 		return 0;
 	}
-	masterHandle.events = POLLWRNORM | POLLWRBAND;
+	masterHandle.events = POLLIN;
 	masterHandle.revents = 0;
 
 	/* If SOCK_POLL_TIMEOUT isn't negative, we want a timeout for recfrom() */

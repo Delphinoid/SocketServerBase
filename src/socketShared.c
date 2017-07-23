@@ -39,7 +39,7 @@
 		for(i = 0; i < changedSockets; i++){
 			for(j = 0; j < socketNum; j++){
 				if(socketSet.fd_array[i] == ufds[j].fd){
-					ufds[j].revents = POLLWRNORM;
+					ufds[j].revents = POLLIN;
 					break;
 				}
 			}

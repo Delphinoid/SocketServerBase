@@ -33,12 +33,12 @@
 #endif
 
 // Flags passed into ssHandleConnections functions
-#define SOCK_UDP              0x0001  // Currently not used
-#define SOCK_TCP              0x0002  // Currently not used
-#define SOCK_VERBOSE          0x0004  // Currently not used
-#define SOCK_MANAGE_TIMEOUTS  0x0008
-#define SOCK_ABSTRACT_HANDLE  0x0010
-#define SOCK_READ_FULL_BUFFER 0x0020  // Currently not used
+#define SOCK_UDP             0x0001  // Currently not used
+#define SOCK_TCP             0x0002  // Currently not used
+#define SOCK_VERBOSE         0x0004  // Currently not used
+#define SOCK_MANAGE_TIMEOUTS 0x0008
+#define SOCK_ABSTRACT_HANDLE 0x0010
+#define SOCK_READ_FULL_QUEUE 0x0020
 
 // Types of disconnects passed into ssHandleDisconnect functions
 #define SOCK_ERROR -1
@@ -52,16 +52,10 @@
 	#define WINSOCK_VERSION MAKEWORD(2, 2)
 	#define EWOULDBLOCK WSAEWOULDBLOCK
 	#define ECONNRESET WSAECONNRESET
-	#define POLLIN     0x0001
-	#define POLLPRI    0x0002
-	#define POLLOUT    0x0004
-	#define POLLERR    0x0008
-	#define POLLHUP    0x0010
-	#define POLLNVAL   0x0020
-	#define POLLRDNORM 0x0040
-	#define POLLRDBAND 0x0080
-	#define POLLWRNORM 0x0100
-	#define POLLWRBAND 0x0200
+	#define POLLHUP    0x002
+	#define POLLOUT    0x010
+	#define POLLIN     0x100
+	#define POLLPRI    0x200
 	int ioctl(int, long, unsigned long*);
 	struct pollfd {
 		SOCKET fd;

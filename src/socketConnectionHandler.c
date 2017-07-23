@@ -88,7 +88,7 @@ unsigned char scdRemoveSocket(socketConnectionHandler *scd, size_t socketID){
 		for(i = scd->idLinks[socketID]; i < scd->size; i++){
 			scd->handles[i] = scd->handles[i+1];
 			scd->details[i] = scd->details[i+1];
-			scd->idLinks[scd->details[i+1].id]--;
+			scd->idLinks[scd->details[i].id]--;
 		}
 
 		// Free the socket ID

@@ -102,8 +102,7 @@ void ssHandleConnectTCP(socketServer *server, socketHandle *handle, socketDetail
 	}
 }
 
-void ssHandleBufferTCP(socketServer *server, size_t socketID){
-	socketDetails details = *ssGetSocketDetails(server, socketID);
+void ssHandleBufferTCP(socketServer *server, socketDetails details){
 	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?
@@ -112,11 +111,10 @@ void ssHandleBufferTCP(socketServer *server, size_t socketID){
 	          &IP[0],
 	          sizeof(IP));
 	printf("Data received over TCP from %s (socket #%u): %s\n", IP, details.id, server->lastBuffer);
-	ssSendDataTCP(ssGetSocketHandle(server, socketID), "Data received over TCP successfully. You should get this.\n");
+	ssSendDataTCP(ssGetSocketHandle(server, details.id), "Data received over TCP successfully. You should get this.\n");
 }
 
-void ssHandleDisconnectTCP(socketServer *server, size_t socketID, char reason){
-	socketDetails details = *ssGetSocketDetails(server, socketID);
+void ssHandleDisconnectTCP(socketServer *server, socketDetails details, char reason){
 	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?
@@ -125,8 +123,8 @@ void ssHandleDisconnectTCP(socketServer *server, size_t socketID, char reason){
 	          &IP[0],
 	          sizeof(IP));
 	printf("Closing TCP connection with %s (socket #%u).\n", IP, details.id);
-	closesocket(ssGetSocketHandle(server, socketID)->fd);
-	scdRemoveSocket(&server->connectionHandler, socketID);
+	closesocket(ssGetSocketHandle(server, details.id)->fd);
+	scdRemoveSocket(&server->connectionHandler, details.id);
 }
 
 void ssHandleConnectUDP(socketServer *server, socketHandle *handle, socketDetails *details){
@@ -144,21 +142,7 @@ void ssHandleConnectUDP(socketServer *server, socketHandle *handle, socketDetail
 	}
 }
 
-void ssHandleBufferAbstractUDP(socketServer *server, void *socketID){
-	socketDetails details = *ssGetSocketDetails(server, *((size_t *)socketID));
-	char IP[45];
-	inet_ntop(details.address.ss_family,
-	          (details.address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details.address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details.address)->sin6_addr)),
-	          &IP[0],
-	          sizeof(IP));
-	printf("Data received over UDP from %s (socket #%u): %s\n", IP, details.id, server->lastBuffer);
-	ssSendDataUDP(server, details, "Data received over UDP successfully. You might get this.\n");
-}
-
-void ssHandleBufferUDP(socketServer *server, void *socketAddress){
-	socketDetails details = *((socketDetails *)socketAddress);
+void ssHandleBufferUDP(socketServer *server, socketDetails details){
 	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?
@@ -170,8 +154,7 @@ void ssHandleBufferUDP(socketServer *server, void *socketAddress){
 	ssSendDataUDP(server, details, "Data received over UDP successfully. You might get this.\n");
 }
 
-void ssHandleDisconnectUDP(socketServer *server, size_t socketID, char reason){
-	socketDetails details = *ssGetSocketDetails(server, socketID);
+void ssHandleDisconnectUDP(socketServer *server, socketDetails details, char reason){
 	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?
@@ -180,7 +163,7 @@ void ssHandleDisconnectUDP(socketServer *server, size_t socketID, char reason){
 	          &IP[0],
 	          sizeof(IP));
 	printf("Closing UDP connection with %s (socket #%u).\n", IP, details.id);
-	ssDisconnectSocketUDP(server, socketID);
+	ssDisconnectSocketUDP(server, details.id);
 }
 
 void cleanup(){
@@ -198,10 +181,10 @@ int main(int argc, char *argv[]){
 
 	atexit(cleanup);
 
-	unsigned char flagsUDP = SOCK_ABSTRACT_HANDLE;
+	unsigned char flagsUDP = SOCK_ABSTRACT_HANDLE | SOCK_READ_FULL_QUEUE;
 	unsigned char flagsTCP = 0;
 	while(1){
-		ssHandleConnectionsUDP(&testServerUDP, 0, &ssHandleConnectUDP, &ssHandleBufferAbstractUDP, &ssHandleDisconnectUDP, flagsUDP);
+		ssHandleConnectionsUDP(&testServerUDP, 0, &ssHandleConnectUDP, &ssHandleBufferUDP, &ssHandleDisconnectUDP, flagsUDP);
 		ssHandleConnectionsTCP(&testServerTCP, 0, &ssHandleConnectTCP, &ssHandleBufferTCP, &ssHandleDisconnectTCP, flagsTCP);
 	}
 
