@@ -22,9 +22,8 @@ unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const
 	size_t lineLength;
 
 	if(serverConfig != NULL){
-		while(!feof(serverConfig)){
+		while(fgets(lineFeed, sizeof(lineFeed), serverConfig)){
 
-			fgets(lineFeed, sizeof(lineFeed), serverConfig);
 			line = lineFeed;
 			lineLength = strlen(line);
 
