@@ -3,9 +3,9 @@
 
 #include "socketServer.h"
 
-void ssSendDataTCP(socketHandle *clientHandle, const char *msg);
-void ssDisconnectSocketTCP(socketServer *server, size_t socketID);
-void ssHandleConnectionsTCP(socketServer *server, uint32_t currentTick, void (*ssHandleConnectTCP)(socketServer*, socketHandle*, socketDetails*), void (*ssHandleBufferTCP)(socketServer*, socketDetails), void (*ssHandleDisconnectTCP)(socketServer*, socketDetails, char), unsigned char flags);
+void ssSendDataTCP(const socketHandle *clientHandle, const char *msg);
+void ssDisconnectSocketTCP(socketServer *server, const size_t socketID);
+void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick, void (*ssHandleConnectTCP)(socketServer*, socketHandle*, socketDetails*), void (*ssHandleBufferTCP)(socketServer*, socketDetails), void (*ssHandleDisconnectTCP)(socketServer*, socketDetails, const char), const unsigned char flags);
 void ssShutdownTCP(socketServer *server);
 
 #endif

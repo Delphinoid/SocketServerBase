@@ -21,10 +21,10 @@ typedef struct {
 	socketDetails *details;  // Holds an array of socketDetails for both TCP and UDP
 } socketConnectionHandler;
 
-unsigned char scdResize(socketConnectionHandler *scd, size_t capacity);
+unsigned char scdResize(socketConnectionHandler *scd, const size_t capacity);
 unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle *handle, socketDetails *details);
-unsigned char scdRemoveSocket(socketConnectionHandler *scd, size_t socketID);
-unsigned char scdInit(socketConnectionHandler *scd, size_t capacity, socketHandle *masterHandle, socketDetails *masterDetails);
+unsigned char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID);
+unsigned char scdInit(socketConnectionHandler *scd, const size_t capacity, socketHandle *masterHandle, socketDetails *masterDetails);
 void scdDelete(socketConnectionHandler *scd);
 
 #endif

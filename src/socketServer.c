@@ -13,12 +13,12 @@ static int ssGetAddressFamily(const char *ip){
 	return -1;
 }
 
-void ssReportError(const char *failedFunction, int errorCode){
+void ssReportError(const char *failedFunction, const int errorCode){
 	printf("\nSocket function %s has failed: %i\nSee here for more information:\nhttps://msdn.microsoft.com/en-us/library/windows/desktop/ms740668%%28v=vs.85%%29.aspx\n\n",
 	       failedFunction, errorCode);
 }
 
-unsigned char ssInit(socketServer *server, int type, int protocol, const int argc, const char *argv[],
+unsigned char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
                      unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
 
 	puts("Initializing server...");
@@ -56,8 +56,8 @@ unsigned char ssInit(socketServer *server, int type, int protocol, const int arg
 	/* If SOCK_POLL_TIMEOUT isn't negative, we want a timeout for recfrom() */
 	if(SOCK_POLL_TIMEOUT > 0){
 		// Set SO_RCVTIMEO
-		unsigned long timeout = SOCK_POLL_TIMEOUT;
-		if(setsockopt(masterHandle.fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) == SOCKET_ERROR){
+		const unsigned long timeout = SOCK_POLL_TIMEOUT;
+		if(setsockopt(masterHandle.fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout)) == SOCKET_ERROR){
 			ssReportError("setsockopt()", lastErrorID);
 			return 0;
 		}
@@ -120,22 +120,22 @@ unsigned char ssInit(socketServer *server, int type, int protocol, const int arg
 
 }
 
-socketHandle *ssGetSocketHandle(socketServer *server, size_t socketID){
+socketHandle *ssGetSocketHandle(const socketServer *server, const size_t socketID){
 	return &server->connectionHandler.handles[server->connectionHandler.idLinks[socketID]];
 }
 
-socketDetails *ssGetSocketDetails(socketServer *server, size_t socketID){
+socketDetails *ssGetSocketDetails(const socketServer *server, const size_t socketID){
 	return &server->connectionHandler.details[server->connectionHandler.idLinks[socketID]];
 }
 
-unsigned char ssSocketTimedOut(socketServer *server, size_t socketID, uint32_t currentTick){
+unsigned char ssSocketTimedOut(socketServer *server, const size_t socketID, const uint32_t currentTick){
 	if(socketID > 0){
 		return currentTick - ssGetSocketDetails(server, socketID)->lastUpdateTick >= SOCK_CONNECTION_TIMEOUT;
 	}
 	return 0;
 }
 
-void ssCheckTimeouts(socketServer *server, uint32_t currentTick){
+void ssCheckTimeouts(socketServer *server, const uint32_t currentTick){
 	/* This function is slow and mostly unnecessary, so it should be avoided if at all possible! */
 	size_t i;
 	for(i = 1; i < server->connectionHandler.size; i++){

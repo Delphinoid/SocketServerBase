@@ -1,22 +1,22 @@
 #include "socketTCP.h"
 #include <stdio.h>
 
-void ssSendDataTCP(socketHandle *clientHandle, const char *msg){
+void ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
 	if(send(clientHandle->fd, msg, strlen(msg) + 1, 0) < 0){
 		ssReportError("send()", lastErrorID);
 	}
 }
 
-void ssDisconnectSocketTCP(socketServer *server, size_t socketID){
+void ssDisconnectSocketTCP(socketServer *server, const size_t socketID){
 	closesocket(ssGetSocketHandle(server, socketID)->fd);
 	scdRemoveSocket(&server->connectionHandler, socketID);
 }
 
-void ssHandleConnectionsTCP(socketServer *server, uint32_t currentTick,
+void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
                             void (*ssHandleConnectTCP)(socketServer*, socketHandle*, socketDetails*),
                             void (*ssHandleBufferTCP)(socketServer*, socketDetails),
-                            void (*ssHandleDisconnectTCP)(socketServer*, socketDetails, char),
-                            unsigned char flags){
+                            void (*ssHandleDisconnectTCP)(socketServer*, socketDetails, const char),
+                            const unsigned char flags){
 
 	int changedSockets = pollFunc(server->connectionHandler.handles, server->connectionHandler.size, SOCK_POLL_TIMEOUT);
 

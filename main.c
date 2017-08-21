@@ -113,7 +113,7 @@ void ssHandleBufferTCP(socketServer *server, socketDetails details){
 	ssSendDataTCP(ssGetSocketHandle(server, details.id), "Data received over TCP successfully. You should get this.\n");
 }
 
-void ssHandleDisconnectTCP(socketServer *server, socketDetails details, char reason){
+void ssHandleDisconnectTCP(socketServer *server, socketDetails details, const char reason){
 	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?
@@ -153,7 +153,7 @@ void ssHandleBufferUDP(socketServer *server, socketDetails details){
 	ssSendDataUDP(server, details, "Data received over UDP successfully. You might get this.\n");
 }
 
-void ssHandleDisconnectUDP(socketServer *server, socketDetails details, char reason){
+void ssHandleDisconnectUDP(socketServer *server, socketDetails details, const char reason){
 	char IP[45];
 	inet_ntop(details.address.ss_family,
 	          (details.address.ss_family == AF_INET ?

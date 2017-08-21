@@ -1,20 +1,20 @@
 #include "socketUDP.h"
 
-void ssSendDataUDP(socketServer *server, socketDetails details, const char *msg){
+void ssSendDataUDP(const socketServer *server, const socketDetails details, const char *msg){
 	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details.address, details.bytes) < 0){
 		ssReportError("sendto()", lastErrorID);
 	}
 }
 
-void ssDisconnectSocketUDP(socketServer *server, size_t socketID){
+void ssDisconnectSocketUDP(socketServer *server, const size_t socketID){
 	scdRemoveSocket(&server->connectionHandler, socketID);
 }
 
 void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
                             void (*ssHandleConnectUDP)(socketServer*, socketHandle*, socketDetails*),
                             void (*ssHandleBufferUDP)(socketServer*, socketDetails),
-                            void (*ssHandleDisconnectUDP)(socketServer*, socketDetails, char),
-                            unsigned char flags){
+                            void (*ssHandleDisconnectUDP)(socketServer*, socketDetails, const char),
+                            const unsigned char flags){
 
 	// Keep receiving data while the buffer is not empty
 	do{
