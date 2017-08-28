@@ -138,7 +138,7 @@ unsigned char ssSocketTimedOut(socketServer *server, const size_t socketID, cons
 void ssCheckTimeouts(socketServer *server, const uint32_t currentTick){
 	/* This function is slow and mostly unnecessary, so it should be avoided if at all possible! */
 	size_t i;
-	for(i = 1; i < server->connectionHandler.size; i++){
+	for(i = 1; i < server->connectionHandler.size; ++i){
 		// Disconnect the socket at index i if it has timed out
 		if(ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
 			// UDP sockets use the same handle as the master socket, so they won't be closed
@@ -146,7 +146,7 @@ void ssCheckTimeouts(socketServer *server, const uint32_t currentTick){
 				closesocket(server->connectionHandler.handles[i].fd);
 			}
 			scdRemoveSocket(&server->connectionHandler, server->connectionHandler.details[i].id);
-			i--;
+			--i;
 		}
 	}
 }

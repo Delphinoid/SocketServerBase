@@ -36,7 +36,7 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 
 				// Check if socket exists, and while we're at it disconnect any sockets that have timed out
 				size_t i;
-				for(i = 1; i < server->connectionHandler.size; i++){
+				for(i = 1; i < server->connectionHandler.size; ++i){
 
 					size_t oldSize = server->connectionHandler.size;
 					socketDetails currentDetails = server->connectionHandler.details[i];

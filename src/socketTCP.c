@@ -25,7 +25,7 @@ void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
 		/* Handle state changes for each socket */
 		// Loop through each connected socket
 		size_t i;
-		for(i = 0; ((flags & SOCK_MANAGE_TIMEOUTS) > 0 || changedSockets > 0) && i < server->connectionHandler.size; i++){
+		for(i = 0; ((flags & SOCK_MANAGE_TIMEOUTS) > 0 || changedSockets > 0) && i < server->connectionHandler.size; ++i){
 
 			size_t oldSize = server->connectionHandler.size;
 			socketHandle  currentHandle  = server->connectionHandler.handles[i];
@@ -38,7 +38,7 @@ void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
 			// Disconnect the socket at index i if a hang up was detected
 			}else if((currentHandle.revents & POLLHUP) > 0){
 				(*ssHandleDisconnectTCP)(server, currentDetails, SOCK_DISCONNECTED);
-				changedSockets--;
+				--changedSockets;
 
 			// Check if any revents flags have been set
 			}else if(currentHandle.revents != 0){
@@ -87,7 +87,7 @@ void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
 
 				// Clear the revents flags
 				currentHandle.revents = 0;
-				changedSockets--;
+				--changedSockets;
 
 			}
 

@@ -44,7 +44,7 @@ unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const
 			unsigned char doneFront = 0, doneEnd = 0;
 			size_t newOffset = 0;
 			size_t i;
-			for(i = 0; (i < lineLength && !doneFront && !doneEnd); i++){
+			for(i = 0; (i < lineLength && !doneFront && !doneEnd); ++i){
 				if(!doneFront && line[i] != '\t' && line[i] != ' '){
 					newOffset = i;
 					doneFront = 1;

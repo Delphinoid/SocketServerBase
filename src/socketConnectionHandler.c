@@ -44,7 +44,7 @@ unsigned char scdResize(socketConnectionHandler *scd, const size_t capacity){
 		while(i < capacity){
 			scd->idStack[i] = i;
 			scd->idLinks[i] = 0;
-			i++;
+			++i;
 		}
 
 		scd->capacity = capacity;
@@ -66,7 +66,7 @@ unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle *handle, s
 		scd->details[scd->size] = *details;
 		scd->idLinks[scd->idStack[scd->size]] = scd->size;
 		scd->idStack[scd->size] = 0;
-		scd->size++;
+		++scd->size;
 
 		return 1;
 
@@ -81,14 +81,14 @@ unsigned char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketI
 	// Don't touch element 0 (the master socket)
 	if(socketID > 0){
 
-		scd->size--;
+		--scd->size;
 
 		// Shift everything after this element over and adjust their links
 		size_t i;
-		for(i = scd->idLinks[socketID]; i < scd->size; i++){
+		for(i = scd->idLinks[socketID]; i < scd->size; ++i){
 			scd->handles[i] = scd->handles[i+1];
 			scd->details[i] = scd->details[i+1];
-			scd->idLinks[scd->details[i].id]--;
+			--scd->idLinks[scd->details[i].id];
 		}
 
 		// Free the socket ID

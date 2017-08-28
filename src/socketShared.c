@@ -21,7 +21,7 @@
 		fd_set socketSet;
 		size_t socketNum = nfds < SOCK_MAX_SOCKETS ? nfds : SOCK_MAX_SOCKETS;
 		size_t i, j;
-		for(i = 0; i < socketNum; i++){
+		for(i = 0; i < socketNum; ++i){
 			socketSet.fd_array[i] = ufds[i].fd;
 		}
 		socketSet.fd_count = socketNum;
@@ -36,8 +36,8 @@
 			timeoutVar = &timeoutConversion;
 		}
 		changedSockets = select(0, &socketSet, NULL, NULL, timeoutVar);
-		for(i = 0; i < changedSockets; i++){
-			for(j = 0; j < socketNum; j++){
+		for(i = 0; i < changedSockets; ++i){
+			for(j = 0; j < socketNum; j){
 				if(socketSet.fd_array[i] == ufds[j].fd){
 					ufds[j].revents = POLLIN;
 					break;
