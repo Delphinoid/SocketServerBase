@@ -18,7 +18,6 @@ unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const
 	FILE *serverConfig = fopen(cfgPath, "r");
 	char lineFeed[1024];
 	char *line;
-	char compare[1024];
 	size_t lineLength;
 
 	if(serverConfig != NULL){
@@ -60,11 +59,11 @@ unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const
 
 			if(lineLength > 7){
 				// IP
-				if(strncpy(compare, line, 5) && (compare[5] = '\0') == 0 && strcmp(compare, "ip = ") == 0){
+				if(strncmp(line, "ip = ", 5) == 0){
 					strncpy(*ip, line+5, 40);
 
 				// Port
-				}else if(strncpy(compare, line, 7) && (compare[7] = '\0') == 0 && strcmp(compare, "port = ") == 0){
+				}else if(strncmp(line, "port = ", 7) == 0){
 					*port = strtol(line+7, NULL, 0);
 
 				}
