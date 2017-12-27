@@ -15,10 +15,12 @@
  */
 
 #ifdef _WIN32
+
+//#ifdef _WIN32
 	#include <winsock2.h>
-#else
-	#include <sys/socket.h>
-#endif
+//#else
+//	#include <sys/socket.h>
+//#endif
 
 #include <stdint.h>
 #include <ctype.h>
@@ -225,3 +227,5 @@ int inet_pton6(const char *src, char *dst)
 
 	return 1;
 }
+
+#endif

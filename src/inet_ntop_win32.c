@@ -16,10 +16,12 @@
  */
 
 #ifdef _WIN32
+
+//#ifdef _WIN32
 	#include <winsock2.h>
-#else
-	#include <sys/socket.h>
-#endif
+//#else
+//	#include <sys/socket.h>
+//#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -183,3 +185,5 @@ inet_ntop6(const unsigned char *src, char *dst, size_t size)
 	strcpy(dst, tmp);
 	return (dst);
 }
+
+#endif

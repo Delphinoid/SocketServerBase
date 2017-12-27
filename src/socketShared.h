@@ -63,6 +63,8 @@
 		short revents;
 	};
 	#define socketHandle struct pollfd
+	int inet_pton(int af, const char *src, char *dst);
+	const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 #else
 	#include <sys/socket.h>
 	#include <arpa/inet.h>

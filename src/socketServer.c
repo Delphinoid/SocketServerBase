@@ -1,8 +1,6 @@
 #include "socketServer.h"
 #include <stdio.h>
 
-int inet_pton(int af, const char *src, char *dst);
-
 static int ssGetAddressFamily(const char *ip){
 	char buffer[16];
 	if(inet_pton(AF_INET, ip, buffer)){

@@ -7,8 +7,6 @@
 socketServer testServerTCP;
 socketServer testServerUDP;
 
-const char *inet_ntop(int af, const void *src, char *dst, size_t size);
-
 unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const char *argv[]){
 
 	char *cfgPath = (char*)argv[0];
