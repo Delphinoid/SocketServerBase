@@ -1,20 +1,22 @@
 #include "socketUDP.h"
 
-void ssSendDataUDP(const socketServer *server, const socketDetails details, const char *msg){
-	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details.address, details.bytes) < 0){
+unsigned char ssSendDataUDP(const socketServer *server, const socketDetails *details, const char *msg){
+	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details->address, details->bytes) < 0){
 		ssReportError("sendto()", lastErrorID);
+		return 0;
 	}
+	return 1;
 }
 
-void ssDisconnectSocketUDP(socketServer *server, const size_t socketID){
-	scdRemoveSocket(&server->connectionHandler, socketID);
+unsigned char ssDisconnectSocketUDP(socketServer *server, const size_t socketID){
+	return scdRemoveSocket(&server->connectionHandler, socketID);
 }
 
-void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
-                            void (*ssHandleConnectUDP)(socketServer*, socketHandle*, socketDetails*),
-                            void (*ssHandleBufferUDP)(socketServer*, socketDetails),
-                            void (*ssHandleDisconnectUDP)(socketServer*, socketDetails, const char),
-                            const unsigned char flags){
+unsigned char ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
+                                     void (*ssHandleConnectUDP)(socketServer*, const socketHandle*, const socketDetails*),
+                                     void (*ssHandleBufferUDP)(const socketServer*, const socketDetails*),
+                                     void (*ssHandleDisconnectUDP)(socketServer*, const socketDetails*, const char),
+                                     const unsigned char flags){
 
 	// Keep receiving data while the buffer is not empty
 	do{
@@ -25,38 +27,41 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 		clientDetails.bytes = sizeof(clientDetails.address);
 
 		// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer
-		server->recvBytes = recvfrom(ssGetSocketHandle(server, 0)->fd, server->lastBuffer, SOCK_MAX_BUFFER_SIZE, 0,
-		                             (struct sockaddr *)&clientDetails.address, &clientDetails.bytes);
+		clientDetails.lastBufferSize = recvfrom(ssGetSocketHandle(server, 0)->fd, clientDetails.lastBuffer, SOCK_MAX_BUFFER_SIZE, 0,
+		                                        (struct sockaddr *)&clientDetails.address, &clientDetails.bytes);
 
 		// Check if anything was received
-		if(server->recvBytes > 0){
+		if(clientDetails.lastBufferSize > 0){
 
 			// If the SOCK_ABSTRACT flag was specified, it's a little complex
 			if((flags & SOCK_ABSTRACT_HANDLE) > 0){
+
+				socketDetails *currentDetails;
 
 				// Check if socket exists, and while we're at it disconnect any sockets that have timed out
 				size_t i;
 				for(i = 1; i < server->connectionHandler.size; ++i){
 
 					size_t oldSize = server->connectionHandler.size;
-					socketDetails currentDetails = server->connectionHandler.details[i];
+					currentDetails = &server->connectionHandler.details[i];
 
 					// Disconnect the socket at index i if it has timed out
-					if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, currentDetails.id, currentTick)){
+					if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, currentDetails->id, currentTick)){
 						(*ssHandleDisconnectUDP)(server, currentDetails, SOCK_TIMED_OUT);
 
 					// Check if the addresses are the same for the two sockets (includes port)
-					}else if(clientDetails.id == 0 && memcmp(&clientDetails.address, &currentDetails.address, clientDetails.bytes)){
-						clientDetails.id = currentDetails.id;
+					}else if(clientDetails.id == 0 && memcmp(&clientDetails.address, &currentDetails->address, clientDetails.bytes)){
+						clientDetails.id = currentDetails->id;
 						if((flags & SOCK_MANAGE_TIMEOUTS) == 0){
 							break;
 						}
+
 					}
 
 					// If some sockets where shuffled (e.g. due to disconnects), reposition i
-					if(currentDetails.id != server->connectionHandler.details[i].id){
-						if(server->connectionHandler.idLinks[currentDetails.id] != 0){
-							i = server->connectionHandler.idLinks[currentDetails.id];
+					if(currentDetails->id != server->connectionHandler.details[i].id){
+						if(server->connectionHandler.idLinks[currentDetails->id] != 0){
+							i = server->connectionHandler.idLinks[currentDetails->id];
 						}else{
 							if(oldSize > server->connectionHandler.size){
 								// Handled oddly because we're using unsigned integers
@@ -81,10 +86,20 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 					(*ssHandleConnectUDP)(server, &clientHandle, &clientDetails);
 				}
 
+				// Copy over the last buffer
+				server->connectionHandler.details[i].lastBufferSize = clientDetails.lastBufferSize;
+				memcpy(server->connectionHandler.details[i].lastBuffer, clientDetails.lastBuffer, clientDetails.lastBufferSize);
+
+				// Do something with the received data
+				(*ssHandleBufferUDP)(server, &server->connectionHandler.details[i]);
+
+			}else{
+
+				// Do something with the received data
+				(*ssHandleBufferUDP)(server, &clientDetails);
+
 			}
 
-			// Do something with the received data
-			(*ssHandleBufferUDP)(server, clientDetails);
 
 		}else{
 			// Error was encountered, abort the loop
@@ -92,11 +107,14 @@ void ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 			// Don't bother reporting the error if it's EWOULDBLOCK or ECONNRESET, as it can be ignored here
 			if(tempLastErrorID != EWOULDBLOCK && tempLastErrorID != ECONNRESET){
 				ssReportError("recvfrom()", tempLastErrorID);
+				return 0;
 			}
 			break;
 		}
 
 	}while((flags & SOCK_READ_FULL_QUEUE) > 0);
+
+	return 1;
 
 }
 

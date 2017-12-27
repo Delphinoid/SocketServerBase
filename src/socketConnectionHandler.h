@@ -7,8 +7,10 @@
 
 typedef struct {
 	size_t id;
-	uint32_t lastUpdateTick;
 	struct sockaddr_storage address;
+	uint32_t lastUpdateTick;  // The tick that data was last received from the socket on
+	int lastBufferSize;       // How many bytes the last buffer received from the socket was
+	char lastBuffer[SOCK_MAX_BUFFER_SIZE];  // The last buffer received from the socket
 	int bytes;
 } socketDetails;
 
@@ -22,9 +24,9 @@ typedef struct {
 } socketConnectionHandler;
 
 unsigned char scdResize(socketConnectionHandler *scd, const size_t capacity);
-unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle *handle, socketDetails *details);
+unsigned char scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details);
 unsigned char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID);
-unsigned char scdInit(socketConnectionHandler *scd, const size_t capacity, socketHandle *masterHandle, socketDetails *masterDetails);
+unsigned char scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails);
 void scdDelete(socketConnectionHandler *scd);
 
 #endif

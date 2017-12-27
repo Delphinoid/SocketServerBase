@@ -1,22 +1,24 @@
 #include "socketTCP.h"
 #include <stdio.h>
 
-void ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
+unsigned char ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
 	if(send(clientHandle->fd, msg, strlen(msg) + 1, 0) < 0){
 		ssReportError("send()", lastErrorID);
+		return 0;
 	}
+	return 1;
 }
 
-void ssDisconnectSocketTCP(socketServer *server, const size_t socketID){
+unsigned char ssDisconnectSocketTCP(socketServer *server, const size_t socketID){
 	closesocket(ssGetSocketHandle(server, socketID)->fd);
-	scdRemoveSocket(&server->connectionHandler, socketID);
+	return scdRemoveSocket(&server->connectionHandler, socketID);
 }
 
-void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
-                            void (*ssHandleConnectTCP)(socketServer*, socketHandle*, socketDetails*),
-                            void (*ssHandleBufferTCP)(socketServer*, socketDetails),
-                            void (*ssHandleDisconnectTCP)(socketServer*, socketDetails, const char),
-                            const unsigned char flags){
+unsigned char ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
+                                     void (*ssHandleConnectTCP)(socketServer*, const socketHandle*, const socketDetails*),
+                                     void (*ssHandleBufferTCP)(const socketServer*, const socketDetails*),
+                                     void (*ssHandleDisconnectTCP)(socketServer*, const socketDetails*, const char),
+                                     const unsigned char flags){
 
 	int changedSockets = pollFunc(server->connectionHandler.handles, server->connectionHandler.size, SOCK_POLL_TIMEOUT);
 
@@ -28,26 +30,26 @@ void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
 		for(i = 0; ((flags & SOCK_MANAGE_TIMEOUTS) > 0 || changedSockets > 0) && i < server->connectionHandler.size; ++i){
 
 			size_t oldSize = server->connectionHandler.size;
-			socketHandle  currentHandle  = server->connectionHandler.handles[i];
-			socketDetails currentDetails = server->connectionHandler.details[i];
+			socketHandle  *currentHandle  = &server->connectionHandler.handles[i];
+			socketDetails *currentDetails = &server->connectionHandler.details[i];
 
 			// Disconnect the socket at index i if it has timed out
-			if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, currentDetails.id, currentTick)){
+			if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, currentDetails->id, currentTick)){
 				(*ssHandleDisconnectTCP)(server, currentDetails, SOCK_TIMED_OUT);
 
 			// Disconnect the socket at index i if a hang up was detected
-			}else if((currentHandle.revents & POLLHUP) > 0){
+			}else if((currentHandle->revents & POLLHUP) > 0){
 				(*ssHandleDisconnectTCP)(server, currentDetails, SOCK_DISCONNECTED);
 				--changedSockets;
 
 			// Check if any revents flags have been set
-			}else if(currentHandle.revents != 0){
+			}else if(currentHandle->revents != 0){
 
 				// Set the last update tick
-				currentDetails.lastUpdateTick = currentTick;
+				currentDetails->lastUpdateTick = currentTick;
 
 				// Master socket has changed state, accept incoming sockets
-				if(currentDetails.id == 0){
+				if(currentDetails->id == 0){
 
 					socketHandle  clientHandle;
 					socketDetails clientDetails;
@@ -63,19 +65,21 @@ void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
 						(*ssHandleConnectTCP)(server, &clientHandle, &clientDetails);
 					}else{
 						ssReportError("accept()", lastErrorID);
+						return 0;
 					}
 
 				// A client has changed state, receive incoming data
 				}else{
 
 					// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer
-					server->recvBytes = recv(currentHandle.fd, server->lastBuffer, SOCK_MAX_BUFFER_SIZE, 0);
+					currentDetails->lastBufferSize = recv(currentHandle->fd, currentDetails->lastBuffer, SOCK_MAX_BUFFER_SIZE, 0);
 
-					if(server->recvBytes == -1){
+					if(currentDetails->lastBufferSize == -1){
 						// Error encountered, disconnect problematic socket
 						ssReportError("recv()", lastErrorID);
 						(*ssHandleDisconnectTCP)(server, currentDetails, SOCK_ERROR);
-					}else if(server->recvBytes == 0){
+						return 0;
+					}else if(currentDetails->lastBufferSize == 0){
 						// If the buffer is empty, the connection has closed
 						(*ssHandleDisconnectTCP)(server, currentDetails, SOCK_DISCONNECTED);
 					}else{
@@ -86,15 +90,15 @@ void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
 				}
 
 				// Clear the revents flags
-				currentHandle.revents = 0;
+				currentHandle->revents = 0;
 				--changedSockets;
 
 			}
 
 			// If some sockets where shuffled (e.g. due to disconnects), reposition i
-			if(currentDetails.id != server->connectionHandler.details[i].id){
-				if(server->connectionHandler.idLinks[currentDetails.id] != 0){
-					i = server->connectionHandler.idLinks[currentDetails.id];
+			if(currentDetails->id != server->connectionHandler.details[i].id){
+				if(server->connectionHandler.idLinks[currentDetails->id] != 0){
+					i = server->connectionHandler.idLinks[currentDetails->id];
 				}else{
 					if(oldSize > server->connectionHandler.size){
 						// Handled oddly because we're using unsigned integers
@@ -117,6 +121,8 @@ void ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick,
 		ssReportError(SOCK_POLL_FUNC, lastErrorID);
 
 	}
+
+	return 1;
 
 }
 

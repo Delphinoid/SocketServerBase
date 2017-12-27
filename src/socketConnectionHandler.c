@@ -56,14 +56,18 @@ unsigned char scdResize(socketConnectionHandler *scd, const size_t capacity){
 
 }
 
-unsigned char scdAddSocket(socketConnectionHandler *scd, socketHandle *handle, socketDetails *details){
+unsigned char scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details){
 
 	if(scd->size < scd->capacity){
 
 		// Link the handle and details arrays to the used ID array
 		scd->handles[scd->size] = *handle;
-		details->id = scd->idStack[scd->size];
-		scd->details[scd->size] = *details;
+		scd->details[scd->size].id = scd->idStack[scd->size];
+		scd->details[scd->size].address = details->address;
+		scd->details[scd->size].lastUpdateTick = details->lastUpdateTick;
+		scd->details[scd->size].lastBufferSize = 0;
+		scd->details[scd->size].lastBuffer[0] = '\0';
+		scd->details[scd->size].bytes = details->bytes;
 		scd->idLinks[scd->idStack[scd->size]] = scd->size;
 		scd->idStack[scd->size] = 0;
 		++scd->size;
@@ -102,7 +106,7 @@ unsigned char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketI
 
 }
 
-unsigned char scdInit(socketConnectionHandler *scd, const size_t capacity, socketHandle *masterHandle, socketDetails *masterDetails){
+unsigned char scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails){
 
 	// Initialize everything
 	scd->size = 0;

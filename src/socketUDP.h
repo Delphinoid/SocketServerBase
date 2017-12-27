@@ -3,9 +3,9 @@
 
 #include "socketServer.h"
 
-void ssSendDataUDP(const socketServer *server, const socketDetails details, const char *msg);
-void ssDisconnectSocketUDP(socketServer *server, const size_t socketID);
-void ssHandleConnectionsUDP(socketServer *server, const uint32_t currentTick, void (*ssHandleConnectUDP)(socketServer*, socketHandle*, socketDetails*), void (*ssHandleBufferUDP)(socketServer*, socketDetails), void (*ssHandleDisconnectUDP)(socketServer*, socketDetails, const char), const unsigned char flags);
+unsigned char ssSendDataUDP(const socketServer *server, const socketDetails *details, const char *msg);
+unsigned char ssDisconnectSocketUDP(socketServer *server, const size_t socketID);
+unsigned char ssHandleConnectionsUDP(socketServer *server, const uint32_t currentTick, void (*ssHandleConnectUDP)(socketServer*, const socketHandle*, const socketDetails*), void (*ssHandleBufferUDP)(const socketServer*, const socketDetails*), void (*ssHandleDisconnectUDP)(socketServer*, const socketDetails*, const char), const unsigned char flags);
 void ssShutdownUDP(socketServer *server);
 
 #endif
