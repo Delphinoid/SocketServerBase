@@ -10,7 +10,7 @@ unsigned char ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
 }
 
 unsigned char ssDisconnectSocketTCP(socketServer *server, const size_t socketID){
-	closesocket(ssGetSocketHandle(server, socketID)->fd);
+	close(ssGetSocketHandle(server, socketID)->fd);
 	return scdRemoveSocket(&server->connectionHandler, socketID);
 }
 
@@ -129,7 +129,7 @@ unsigned char ssHandleConnectionsTCP(socketServer *server, const uint32_t curren
 void ssShutdownTCP(socketServer *server){
 	size_t i = server->connectionHandler.size;
 	while(i > 0){
-		closesocket(server->connectionHandler.handles[--i].fd);
+		close(server->connectionHandler.handles[--i].fd);
 	}
 	scdDelete(&server->connectionHandler);
 }

@@ -70,9 +70,8 @@ unsigned char scdAddSocket(socketConnectionHandler *scd, const socketHandle *han
 		scd->details[scd->size].bytes = details->bytes;
 		scd->idLinks[scd->idStack[scd->size]] = scd->size;
 		scd->idStack[scd->size] = 0;
-		++scd->size;
 
-		return 1;
+		return scd->details[scd->size++].id;
 
 	}
 
@@ -120,7 +119,8 @@ unsigned char scdInit(socketConnectionHandler *scd, const size_t capacity, const
 	}
 
 	// Add the master socket
-	return scdAddSocket(scd, masterHandle, masterDetails);
+	scdAddSocket(scd, masterHandle, masterDetails);
+	return 1;
 
 }
 

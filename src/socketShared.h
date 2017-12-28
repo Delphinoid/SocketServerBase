@@ -56,9 +56,9 @@
 	#define POLLOUT    0x010
 	#define POLLIN     0x100
 	#define POLLPRI    0x200
-	int ioctl(int, long, unsigned long*);
+	#define close(x) closesocket(x)
 	struct pollfd {
-		SOCKET fd;
+		int fd;
 		short events;
 		short revents;
 	};
@@ -73,7 +73,6 @@
 	#define lastErrorID errno
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
-	#define SOCKET int
 	#ifdef SOCK_USE_POLL
 		#include <sys/poll.h>
 	#else
@@ -88,7 +87,7 @@
 		#define POLLWRNORM 0x0100
 		#define POLLWRBAND 0x0200
 		struct pollfd {
-			SOCKET fd;
+			int fd;
 			short events;
 			short revents;
 		};

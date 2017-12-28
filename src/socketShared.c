@@ -1,11 +1,5 @@
 #include "socketShared.h"
 
-#ifdef _WIN32
-	int ioctl(int fd, long request, unsigned long *mode){
-		return ioctlsocket(fd, request, mode);
-	}
-#endif
-
 #ifdef SOCK_USE_POLL
 	#ifdef _WIN32
 		WINSOCK_API_LINKAGE int WSAAPI WSAPoll(struct pollfd *ufds, ULONG fds, INT timeout);

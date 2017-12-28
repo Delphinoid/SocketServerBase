@@ -1,7 +1,25 @@
 #include "socketServer.h"
 #include <stdio.h>
 
-static int ssGetAddressFamily(const char *ip){
+void ssReportError(const char *failedFunction, const int errorCode){
+	printf("\nSocket function %s has failed: %i\nSee here for more information:\nhttps://msdn.microsoft.com/en-us/library/windows/desktop/ms740668%%28v=vs.85%%29.aspx\n\n",
+	       failedFunction, errorCode);
+}
+
+static inline unsigned char ssSetNonBlockMode(const int fd, unsigned long mode){
+	#ifdef _WIN32
+		return !ioctlsocket(fd, FIONBIO, &mode);
+	#else
+		int flags = fcntl(fd, F_GETFL, 0);
+		if(flags < 0){
+			return 0;
+		}
+		flags = mode ? (flags | O_NONBLOCK) : (flags & ~O_NONBLOCK);
+		return !fcntl(fd, F_SETFL, flags);
+	#endif
+}
+
+static inline int ssGetAddressFamily(const char *ip){
 	char buffer[16];
 	if(inet_pton(AF_INET, ip, buffer)){
 		return AF_INET;
@@ -9,11 +27,6 @@ static int ssGetAddressFamily(const char *ip){
 		return AF_INET6;
 	}
 	return -1;
-}
-
-void ssReportError(const char *failedFunction, const int errorCode){
-	printf("\nSocket function %s has failed: %i\nSee here for more information:\nhttps://msdn.microsoft.com/en-us/library/windows/desktop/ms740668%%28v=vs.85%%29.aspx\n\n",
-	       failedFunction, errorCode);
 }
 
 unsigned char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
@@ -60,8 +73,7 @@ unsigned char ssInit(socketServer *server, const int type, const int protocol, c
 			return 0;
 		}
 	}else if(SOCK_POLL_TIMEOUT == 0){
-		unsigned long mode = 1;
-		ioctl(masterHandle.fd, FIONBIO, &mode);
+		ssSetNonBlockMode(masterHandle.fd, 1);
 	}
 
 	/* Bind the master socket to the host address */
@@ -141,7 +153,7 @@ void ssCheckTimeouts(socketServer *server, const uint32_t currentTick){
 		if(ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
 			// UDP sockets use the same handle as the master socket, so they won't be closed
 			if(server->connectionHandler.handles[i].fd != server->connectionHandler.handles[0].fd){
-				closesocket(server->connectionHandler.handles[i].fd);
+				close(server->connectionHandler.handles[i].fd);
 			}
 			scdRemoveSocket(&server->connectionHandler, server->connectionHandler.details[i].id);
 			--i;

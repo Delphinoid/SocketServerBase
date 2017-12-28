@@ -91,8 +91,9 @@ void ssHandleConnectTCP(socketServer *server, const socketHandle *handle, const 
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	if(scdAddSocket(&server->connectionHandler, handle, details)){
-		printf("Accepted TCP connection from %s (socket #%u)\n", IP, details->id);
+	const size_t id = scdAddSocket(&server->connectionHandler, handle, details);
+	if(id){
+		printf("Accepted TCP connection from %s (socket #%u)\n", IP, id);
 	}else{
 		printf("Error: could not accept TCP connection from %s: server is full.\n", IP);
 	}
@@ -119,8 +120,7 @@ void ssHandleDisconnectTCP(socketServer *server, const socketDetails *details, c
 	          &IP[0],
 	          sizeof(IP));
 	printf("Closing TCP connection with %s (socket #%u).\n", IP, details->id);
-	closesocket(ssGetSocketHandle(server, details->id)->fd);
-	scdRemoveSocket(&server->connectionHandler, details->id);
+	ssDisconnectSocketTCP(server, details->id);
 }
 
 void ssHandleConnectUDP(socketServer *server, const socketHandle *handle, const socketDetails *details){
@@ -131,8 +131,9 @@ void ssHandleConnectUDP(socketServer *server, const socketHandle *handle, const 
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	if(scdAddSocket(&server->connectionHandler, handle, details)){
-		printf("Accepted UDP connection from %s (socket #%u)\n", IP, details->id);
+	const size_t id = scdAddSocket(&server->connectionHandler, handle, details);
+	if(id){
+		printf("Accepted UDP connection from %s (socket #%u)\n", IP, id);
 	}else{
 		printf("Error: could not accept UDP connection from %s: server is full.\n", IP);
 	}
