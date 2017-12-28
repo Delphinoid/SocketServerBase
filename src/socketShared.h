@@ -21,16 +21,16 @@
 #ifndef SOCK_MAX_SOCKETS
 	#define SOCK_MAX_SOCKETS 201
 #endif
-#undef FD_SETSIZE
-#undef __FD_SETSIZE
-#define FD_SETSIZE SOCK_MAX_SOCKETS
-#define __FD_SETSIZE SOCK_MAX_SOCKETS
-
 #ifdef SOCK_USE_POLL
 	#define SOCK_POLL_FUNC "poll()"
 #else
 	#define SOCK_POLL_FUNC "select()"
 #endif
+
+#undef FD_SETSIZE
+#undef __FD_SETSIZE
+#define FD_SETSIZE SOCK_MAX_SOCKETS
+#define __FD_SETSIZE SOCK_MAX_SOCKETS
 
 // Flags passed into ssHandleConnections functions
 #define SOCK_UDP             0x01  // Currently not used

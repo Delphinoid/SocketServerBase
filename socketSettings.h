@@ -1,6 +1,12 @@
 #ifndef SOCKETSETTINGS_H
 #define SOCKETSETTINGS_H
 
+// Most of these are set to their default values.
+#define SOCK_DEFAULT_ADDRESS_FAMILY AF_INET6
+#define SOCK_DEFAULT_PORT 7249
+#define SOCK_MAX_BUFFER_SIZE 1024
+#define SOCK_POLL_TIMEOUT 0
+#define SOCK_CONNECTION_TIMEOUT 60000
 #define SOCK_MAX_SOCKETS 201
 #define SOCK_USE_POLL
 
