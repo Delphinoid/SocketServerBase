@@ -91,12 +91,7 @@ void ssHandleConnectTCP(socketServer *server, const socketHandle *handle, const 
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	const size_t id = scdAddSocket(&server->connectionHandler, handle, details);
-	if(id){
-		printf("Accepted TCP connection from %s (socket #%u)\n", IP, id);
-	}else{
-		printf("Error: could not accept TCP connection from %s: server is full.\n", IP);
-	}
+	printf("Accepted TCP connection from %s (socket #%u).\n", IP, details->id);
 }
 
 void ssHandleBufferTCP(const socketServer *server, const socketDetails *details){
@@ -111,7 +106,7 @@ void ssHandleBufferTCP(const socketServer *server, const socketDetails *details)
 	ssSendDataTCP(ssGetSocketHandle(server, details->id), "Data received over TCP successfully. You should get this.\n");
 }
 
-void ssHandleDisconnectTCP(socketServer *server, const socketDetails *details, const char reason){
+void ssHandleDisconnectTCP(socketServer *server, const socketDetails *details){
 	char IP[45];
 	inet_ntop(details->address.ss_family,
 	          (details->address.ss_family == AF_INET ?
@@ -120,7 +115,7 @@ void ssHandleDisconnectTCP(socketServer *server, const socketDetails *details, c
 	          &IP[0],
 	          sizeof(IP));
 	printf("Closing TCP connection with %s (socket #%u).\n", IP, details->id);
-	ssDisconnectSocketTCP(server, details->id);
+	scdRemoveSocket(&server->connectionHandler, details->id);
 }
 
 void ssHandleConnectUDP(socketServer *server, const socketHandle *handle, const socketDetails *details){
@@ -131,12 +126,7 @@ void ssHandleConnectUDP(socketServer *server, const socketHandle *handle, const 
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	const size_t id = scdAddSocket(&server->connectionHandler, handle, details);
-	if(id){
-		printf("Accepted UDP connection from %s (socket #%u)\n", IP, id);
-	}else{
-		printf("Error: could not accept UDP connection from %s: server is full.\n", IP);
-	}
+	printf("Accepted UDP connection from %s (socket #%u).\n", IP, details->id);
 }
 
 void ssHandleBufferUDP(const socketServer *server, const socketDetails *details){
@@ -151,7 +141,7 @@ void ssHandleBufferUDP(const socketServer *server, const socketDetails *details)
 	ssSendDataUDP(server, details, "Data received over UDP successfully. You might get this.\n");
 }
 
-void ssHandleDisconnectUDP(socketServer *server, const socketDetails *details, const char reason){
+void ssHandleDisconnectUDP(socketServer *server, const socketDetails *details){
 	char IP[45];
 	inet_ntop(details->address.ss_family,
 	          (details->address.ss_family == AF_INET ?
@@ -160,7 +150,7 @@ void ssHandleDisconnectUDP(socketServer *server, const socketDetails *details, c
 	          &IP[0],
 	          sizeof(IP));
 	printf("Closing UDP connection with %s (socket #%u).\n", IP, details->id);
-	ssDisconnectSocketUDP(server, details->id);
+	scdRemoveSocket(&server->connectionHandler, details->id);
 }
 
 void cleanup(){
@@ -180,12 +170,53 @@ int main(int argc, char *argv[]){
 
 	atexit(cleanup);
 
+	size_t i;
 	unsigned char flagsUDP = SOCK_ABSTRACT_HANDLE | SOCK_READ_FULL_QUEUE;
 	unsigned char flagsTCP = 0;
 	while(1){
-		if(!ssHandleConnectionsUDP(&testServerUDP, 0, &ssHandleConnectUDP, &ssHandleBufferUDP, &ssHandleDisconnectUDP, flagsUDP) ||
-		   !ssHandleConnectionsTCP(&testServerTCP, 0, &ssHandleConnectTCP, &ssHandleBufferTCP, &ssHandleDisconnectTCP, flagsTCP)){
+		if(!ssHandleConnectionsUDP(&testServerUDP, 0, flagsUDP) ||
+		   !ssHandleConnectionsTCP(&testServerTCP, 0, flagsTCP)){
 			break;
+		}
+		for(i = 0; i < testServerTCP.connectionHandler.size; ++i){
+			if((testServerTCP.connectionHandler.details[i].flags & SOCK_CONNECTED) > 0){
+				// Socket has connected.
+				ssHandleConnectTCP(&testServerTCP, &testServerTCP.connectionHandler.handles[i], &testServerTCP.connectionHandler.details[i]);
+				testServerTCP.connectionHandler.details[i].flags &= ~SOCK_CONNECTED;
+			}
+			if((testServerTCP.connectionHandler.details[i].flags & SOCK_NEW_DATA) > 0){
+				// Socket has sent data.
+				ssHandleBufferTCP(&testServerTCP, &testServerTCP.connectionHandler.details[i]);
+				testServerTCP.connectionHandler.details[i].flags &= ~SOCK_NEW_DATA;
+			}
+			if((testServerTCP.connectionHandler.details[i].flags & SOCK_DISCONNECTED) > 0 ||
+			   (testServerTCP.connectionHandler.details[i].flags & SOCK_TIMED_OUT) > 0 ||
+			   (testServerTCP.connectionHandler.details[i].flags & SOCK_ERROR) > 0){
+				// Socket has disconnected.
+				ssHandleDisconnectTCP(&testServerTCP, &testServerTCP.connectionHandler.details[i]);
+				testServerTCP.connectionHandler.details[i].flags &= ~(SOCK_DISCONNECTED | SOCK_TIMED_OUT | SOCK_ERROR);
+				--i;
+			}
+		}
+		for(i = 0; i < testServerUDP.connectionHandler.size; ++i){
+			if((testServerUDP.connectionHandler.details[i].flags & SOCK_CONNECTED) > 0){
+				// Socket has connected.
+				ssHandleConnectUDP(&testServerUDP, &testServerUDP.connectionHandler.handles[i], &testServerUDP.connectionHandler.details[i]);
+				testServerUDP.connectionHandler.details[i].flags &= ~SOCK_CONNECTED;
+			}
+			if((testServerUDP.connectionHandler.details[i].flags & SOCK_NEW_DATA) > 0){
+				// Socket has sent data.
+				ssHandleBufferUDP(&testServerUDP, &testServerUDP.connectionHandler.details[i]);
+				testServerUDP.connectionHandler.details[i].flags &= ~SOCK_NEW_DATA;
+			}
+			if((testServerUDP.connectionHandler.details[i].flags & SOCK_DISCONNECTED) > 0 ||
+			   (testServerUDP.connectionHandler.details[i].flags & SOCK_TIMED_OUT) > 0 ||
+			   (testServerUDP.connectionHandler.details[i].flags & SOCK_ERROR) > 0){
+				// Socket has disconnected.
+				ssHandleDisconnectUDP(&testServerUDP, &testServerUDP.connectionHandler.details[i]);
+				testServerUDP.connectionHandler.details[i].flags &= ~(SOCK_DISCONNECTED | SOCK_TIMED_OUT | SOCK_ERROR);
+				--i;
+			}
 		}
 	}
 

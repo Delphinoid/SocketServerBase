@@ -1,110 +1,75 @@
 #include "socketUDP.h"
 
 unsigned char ssSendDataUDP(const socketServer *server, const socketDetails *details, const char *msg){
-	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details->address, details->bytes) < 0){
+	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details->address, details->addressSize) < 0){
 		ssReportError("sendto()", lastErrorID);
 		return 0;
 	}
 	return 1;
 }
 
-unsigned char ssDisconnectSocketUDP(socketServer *server, const size_t socketID){
-	return scdRemoveSocket(&server->connectionHandler, socketID);
-}
+unsigned char ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick, const unsigned char flags){
 
-unsigned char ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
-                                     void (*ssHandleConnectUDP)(socketServer*, const socketHandle*, const socketDetails*),
-                                     void (*ssHandleBufferUDP)(const socketServer*, const socketDetails*),
-                                     void (*ssHandleDisconnectUDP)(socketServer*, const socketDetails*, const char),
-                                     const unsigned char flags){
-
-	// Keep receiving data while the buffer is not empty
+	// Keep receiving data while the buffer is not empty.
 	do{
 
-		// Create ssSocket struct for the socket we are receiving data from
+		// Create ssSocket struct for the socket we are receiving data from.
 		socketDetails clientDetails;
 		clientDetails.id = 0;
-		clientDetails.bytes = sizeof(clientDetails.address);
+		clientDetails.addressSize = sizeof(clientDetails.address);
 
-		// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer
+		// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer.
 		clientDetails.lastBufferSize = recvfrom(ssGetSocketHandle(server, 0)->fd, clientDetails.lastBuffer, SOCK_MAX_BUFFER_SIZE, 0,
-		                                        (struct sockaddr *)&clientDetails.address, &clientDetails.bytes);
+		                                        (struct sockaddr *)&clientDetails.address, &clientDetails.addressSize);
 
-		// Check if anything was received
+		// Check if anything was received.
 		if(clientDetails.lastBufferSize > 0){
 
-			// If the SOCK_ABSTRACT flag was specified, it's a little complex
-			if((flags & SOCK_ABSTRACT_HANDLE) > 0){
+			// Check if socket exists, and while we're at it disconnect any sockets that have timed out.
+			size_t i;
+			for(i = 1; i < server->connectionHandler.size; ++i){
 
-				socketDetails *currentDetails;
-
-				// Check if socket exists, and while we're at it disconnect any sockets that have timed out
-				size_t i;
-				for(i = 1; i < server->connectionHandler.size; ++i){
-
-					size_t oldSize = server->connectionHandler.size;
-					currentDetails = &server->connectionHandler.details[i];
-
-					// Disconnect the socket at index i if it has timed out
-					if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, currentDetails->id, currentTick)){
-						(*ssHandleDisconnectUDP)(server, currentDetails, SOCK_TIMED_OUT);
-
-					// Check if the addresses are the same for the two sockets (includes port)
-					}else if(clientDetails.id == 0 && memcmp(&clientDetails.address, &currentDetails->address, clientDetails.bytes)){
-						clientDetails.id = currentDetails->id;
-						if((flags & SOCK_MANAGE_TIMEOUTS) == 0){
-							break;
-						}
-
+				// Check if the addresses are the same for the two sockets (includes port).
+				if(clientDetails.id == 0 && memcmp(&clientDetails.address, &server->connectionHandler.details[i].address, clientDetails.addressSize)){
+					clientDetails.id = server->connectionHandler.details[i].id;
+					if((flags & SOCK_MANAGE_TIMEOUTS) == 0){
+						break;
 					}
 
-					// If some sockets where shuffled (e.g. due to disconnects), reposition i
-					if(currentDetails->id != server->connectionHandler.details[i].id){
-						if(server->connectionHandler.idLinks[currentDetails->id] != 0){
-							i = server->connectionHandler.idLinks[currentDetails->id];
-						}else{
-							if(oldSize > server->connectionHandler.size){
-								// Handled oddly because we're using unsigned integers
-								// oldSize is now the difference in size between oldSize and server->connectionHandler.size
-								oldSize -= server->connectionHandler.size;
-								if(oldSize >= i){
-									i = 1;
-								}else{
-									// May jump too far back, but this is a rare case anyway
-									i -= oldSize;
-								}
-							}
-						}
-					}
+				// Disconnect the socket at index i if it has timed out.
+				}else if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
+					server->connectionHandler.details[i].flags |= SOCK_TIMED_OUT;
 
 				}
-
-				// If the socket was not found (we currently do not have a session with it), add it to the connection handler
-				if(clientDetails.id == 0){
-					socketHandle clientHandle;
-					clientHandle.fd = server->connectionHandler.handles[0].fd;
-					(*ssHandleConnectUDP)(server, &clientHandle, &clientDetails);
-				}
-
-				// Copy over the last buffer
-				server->connectionHandler.details[i].lastBufferSize = clientDetails.lastBufferSize;
-				memcpy(server->connectionHandler.details[i].lastBuffer, clientDetails.lastBuffer, clientDetails.lastBufferSize);
-
-				// Do something with the received data
-				(*ssHandleBufferUDP)(server, &server->connectionHandler.details[i]);
-
-			}else{
-
-				// Do something with the received data
-				(*ssHandleBufferUDP)(server, &clientDetails);
 
 			}
 
+			// Check if i is within correct bounds.
+			if(i < server->connectionHandler.capacity){
+
+				// If the socket was not found (we currently do not have a session with it), add it to the connection handler.
+				if(clientDetails.id == 0){
+					socketHandle clientHandle;
+					clientHandle.fd = server->connectionHandler.handles[0].fd;
+					const size_t id = scdAddSocket(&server->connectionHandler, &clientHandle, &clientDetails);
+					ssGetSocketDetails(server, id)->flags |= SOCK_CONNECTED;
+				}
+
+				// Copy over the last buffer.
+				server->connectionHandler.details[i].lastBufferSize = clientDetails.lastBufferSize;
+				memcpy(server->connectionHandler.details[i].lastBuffer, clientDetails.lastBuffer, clientDetails.lastBufferSize);
+
+				// Do something with the received data.
+				server->connectionHandler.details[i].flags |= SOCK_NEW_DATA;
+
+			}else{
+				// Server is full.
+			}
 
 		}else{
-			// Error was encountered, abort the loop
+			// Error was encountered, abort the loop.
 			int tempLastErrorID = lastErrorID;
-			// Don't bother reporting the error if it's EWOULDBLOCK or ECONNRESET, as it can be ignored here
+			// Don't bother reporting the error if it's EWOULDBLOCK or ECONNRESET, as it can be ignored here.
 			if(tempLastErrorID != EWOULDBLOCK && tempLastErrorID != ECONNRESET){
 				ssReportError("recvfrom()", tempLastErrorID);
 				return 0;

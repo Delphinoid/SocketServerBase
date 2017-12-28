@@ -14,7 +14,7 @@ typedef struct {
 	socketConnectionHandler connectionHandler;
 } socketServer;
 
-// Socket functions shared by TCP and UDP sockets
+// Socket functions shared by TCP and UDP sockets.
 void ssReportError(const char *failedFunction, const int errorCode);
 unsigned char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
                      unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**));

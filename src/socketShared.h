@@ -32,18 +32,13 @@
 #define FD_SETSIZE SOCK_MAX_SOCKETS
 #define __FD_SETSIZE SOCK_MAX_SOCKETS
 
-// Flags passed into ssHandleConnections functions
-#define SOCK_UDP             0x01  // Currently not used
-#define SOCK_TCP             0x02  // Currently not used
-#define SOCK_VERBOSE         0x04  // Currently not used
+// Flags passed into ssHandleConnections functions.
+#define SOCK_UDP             0x01  // Currently no longer used.
+#define SOCK_TCP             0x02  // Currently no longer used.
+#define SOCK_VERBOSE         0x04  // Currently no longer used.
 #define SOCK_MANAGE_TIMEOUTS 0x08
-#define SOCK_ABSTRACT_HANDLE 0x10
+#define SOCK_ABSTRACT_HANDLE 0x10  // Currently no longer used.
 #define SOCK_READ_FULL_QUEUE 0x20
-
-// Types of disconnects passed into ssHandleDisconnect functions
-#define SOCK_ERROR -1
-#define SOCK_DISCONNECTED 0
-#define SOCK_TIMED_OUT 1
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -56,7 +51,7 @@
 	#define POLLOUT    0x010
 	#define POLLIN     0x100
 	#define POLLPRI    0x200
-	#define close(x) closesocket(x)
+	#define socketclose(x) closesocket(x)
 	struct pollfd {
 		int fd;
 		short events;
@@ -73,6 +68,7 @@
 	#define lastErrorID errno
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
+	#define socketclose(x) close(x)
 	#ifdef SOCK_USE_POLL
 		#include <sys/poll.h>
 	#else
