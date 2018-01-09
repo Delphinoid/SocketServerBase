@@ -4,7 +4,7 @@
 #include "socketConnectionHandler.h"
 
 #ifdef _WIN32
-	unsigned char ssStartup();
+	signed char ssStartup();
 	void ssCleanup();
 #endif
 
@@ -16,11 +16,11 @@ typedef struct {
 
 // Socket functions shared by TCP and UDP sockets.
 void ssReportError(const char *failedFunction, const int errorCode);
-unsigned char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
-                     unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**));
+signed char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
+                   signed char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**));
 socketHandle  *ssGetSocketHandle(const socketServer *server, const size_t socketID);
 socketDetails *ssGetSocketDetails(const socketServer *server, const size_t socketID);
-unsigned char ssSocketTimedOut(socketServer *server, const size_t socketID, const uint32_t currentTick);
+signed char ssSocketTimedOut(socketServer *server, const size_t socketID, const uint32_t currentTick);
 void ssCheckTimeouts(socketServer *server, const uint32_t currentTick);
 
 #endif

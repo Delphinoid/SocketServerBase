@@ -1,6 +1,6 @@
 #include "socketUDP.h"
 
-unsigned char ssSendDataUDP(const socketServer *server, const socketDetails *details, const char *msg){
+signed char ssSendDataUDP(const socketServer *server, const socketDetails *details, const char *msg){
 	if(sendto(ssGetSocketHandle(server, 0)->fd, msg, strlen(msg), 0, (struct sockaddr *)&details->address, details->addressSize) < 0){
 		ssReportError("sendto()", lastErrorID);
 		return 0;
@@ -8,7 +8,7 @@ unsigned char ssSendDataUDP(const socketServer *server, const socketDetails *det
 	return 1;
 }
 
-unsigned char ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick, const unsigned char flags){
+signed char ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick, const unsigned char flags){
 
 	// Keep receiving data while the buffer is not empty.
 	do{
@@ -68,7 +68,7 @@ unsigned char ssHandleConnectionsUDP(socketServer *server, uint32_t currentTick,
 
 		}else{
 			// Error was encountered, abort the loop.
-			int tempLastErrorID = lastErrorID;
+			const int tempLastErrorID = lastErrorID;
 			// Don't bother reporting the error if it's EWOULDBLOCK or ECONNRESET, as it can be ignored here.
 			if(tempLastErrorID != EWOULDBLOCK && tempLastErrorID != ECONNRESET){
 				ssReportError("recvfrom()", tempLastErrorID);

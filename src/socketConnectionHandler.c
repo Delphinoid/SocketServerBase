@@ -1,6 +1,6 @@
 #include "socketConnectionHandler.h"
 
-unsigned char scdResize(socketConnectionHandler *scd, const size_t capacity){
+signed char scdResize(socketConnectionHandler *scd, const size_t capacity){
 
 	if(capacity > scd->capacity){
 
@@ -56,7 +56,7 @@ unsigned char scdResize(socketConnectionHandler *scd, const size_t capacity){
 
 }
 
-unsigned char scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details){
+signed char scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details){
 
 	if(scd->size < scd->capacity){
 
@@ -79,7 +79,7 @@ unsigned char scdAddSocket(socketConnectionHandler *scd, const socketHandle *han
 
 }
 
-unsigned char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID){
+signed char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID){
 
 	// Don't touch element 0 (the master socket).
 	if(socketID > 0){
@@ -105,7 +105,7 @@ unsigned char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketI
 
 }
 
-unsigned char scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails){
+signed char scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails){
 
 	// Initialize everything.
 	scd->size = 0;

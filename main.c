@@ -7,7 +7,7 @@
 socketServer testServerTCP;
 socketServer testServerUDP;
 
-unsigned char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const char *argv[]){
+signed char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const char *argv[]){
 
 	char *cfgPath = (char*)argv[0];
 	cfgPath[strrchr(cfgPath, '\\') - cfgPath + 1] = '\0';  // Removes program name (everything after the last backslash) from the path

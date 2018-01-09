@@ -6,7 +6,7 @@ void ssReportError(const char *failedFunction, const int errorCode){
 	       failedFunction, errorCode);
 }
 
-static inline unsigned char ssSetNonBlockMode(const int fd, unsigned long mode){
+static inline signed char ssSetNonBlockMode(const int fd, unsigned long mode){
 	#ifdef _WIN32
 		return !ioctlsocket(fd, FIONBIO, &mode);
 	#else
@@ -29,8 +29,8 @@ static inline int ssGetAddressFamily(const char *ip){
 	return -1;
 }
 
-unsigned char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
-                     unsigned char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
+signed char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
+                   signed char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
 
 	puts("Initializing server...");
 
@@ -138,7 +138,7 @@ inline socketDetails *ssGetSocketDetails(const socketServer *server, const size_
 	return &server->connectionHandler.details[server->connectionHandler.idLinks[socketID]];
 }
 
-unsigned char ssSocketTimedOut(socketServer *server, const size_t socketID, const uint32_t currentTick){
+signed char ssSocketTimedOut(socketServer *server, const size_t socketID, const uint32_t currentTick){
 	if(socketID > 0){
 		return currentTick - ssGetSocketDetails(server, socketID)->lastUpdateTick >= SOCK_CONNECTION_TIMEOUT;
 	}
@@ -162,7 +162,7 @@ void ssCheckTimeouts(socketServer *server, const uint32_t currentTick){
 }
 
 #ifdef _WIN32
-	unsigned char ssStartup(){
+	signed char ssStartup(){
 		/* Initialize Winsock */
 		WSADATA wsaData;
 		int initError = WSAStartup(WINSOCK_VERSION, &wsaData);
