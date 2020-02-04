@@ -2,104 +2,120 @@
 #include <string.h>
 #include <stdio.h>
 
-return_t ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
+return_t ssSendDataTCP(const socketHandle *const __RESTRICT__ clientHandle, const char *const __RESTRICT__ msg){
 	if(send(clientHandle->fd, msg, strlen(msg) + 1, 0) < 0){
+		#ifdef SOCKET_DEBUG
 		ssReportError("send()", lastErrorID);
+		#endif
 		return 0;
 	}
 	return 1;
 }
 
-return_t ssDisconnectSocketTCP(socketServer *server, const size_t socketID){
-	socketclose(ssGetSocketHandle(server, socketID)->fd);
-	return scdRemoveSocket(&server->connectionHandler, socketID);
+return_t ssDisconnectSocketTCP(socketConnectionHandler *const __RESTRICT__ sc, socketDetails *clientDetails){
+	socketclose(clientDetails->handle->fd);
+	return scRemoveSocket(sc, clientDetails);
 }
 
-return_t ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick, const flags_t flags){
+return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, const uint32_t currentTick, const flags_t flags){
 
-	size_t i;
-	int changedSockets = pollFunc(server->connectionHandler.handles, server->connectionHandler.size, SOCK_POLL_TIMEOUT);
+	socketDetails *i = sc->details;
+	size_t j = sc->nfds;
+
+	int changedSockets = pollFunc(sc->handles, j, SOCKET_POLL_TIMEOUT);
 
 	// If pollFunc() returned SOCKET_ERROR (-1), return.
 	if(changedSockets == SOCKET_ERROR){
-		ssReportError(SOCK_POLL_FUNC, lastErrorID);
+		#ifdef SOCKET_DEBUG
+		ssReportError(SOCKET_POLL_FUNC, lastErrorID);
+		#endif
 		return 0;
 	}
 
 	// Handle state changes for each socket.
 	// Loop through each connected socket.
-	for(i = 0; (flagsAreSet(flags, SOCK_MANAGE_TIMEOUTS) || changedSockets > 0) && i < server->connectionHandler.size; ++i){
+	while(j > 0){
 
-		// Disconnect the socket at index i if a hang up was detected.
-		if((server->connectionHandler.handles[i].revents & POLLHUP) > 0){
-			server->connectionHandler.details[i].flags |= SOCK_DISCONNECTED;
-			socketclose(ssGetSocketHandle(server, server->connectionHandler.details[i].id)->fd);
-			--changedSockets;
+		if((flagsAreUnset(flags, SOCKET_FLAGS_MANAGE_TIMEOUTS) && changedSockets <= 0)){
+			break;
+		}
 
-		// Check if any revents flags have been set.
-		}else if(server->connectionHandler.handles[i].revents != 0){
+		if(sdValid(i)){
 
-			// Set the last update tick.
-			server->connectionHandler.details[i].lastUpdateTick = currentTick;
+			// Disconnect the current socket if a hang up was detected.
+			if((i->handle->revents & POLLHUP) > 0){
+				i->flags |= SOCKET_DETAILS_DISCONNECTED;
+				socketclose(i->handle->fd);
+				--changedSockets;
 
-			// Master socket has changed state, accept incoming sockets.
-			if(server->connectionHandler.details[i].id == 0){
+			// Check if any revents flags have been set.
+			}else if(i->handle->revents != 0){
 
-				socketHandle  clientHandle;
-				socketDetails clientDetails;
-				clientDetails.addressSize = sizeof(clientDetails.address);
+				// Set the last update tick.
+				i->lastTick = currentTick;
 
-				clientHandle.fd = accept(ssGetSocketHandle(server, 0)->fd, (struct sockaddr *)&clientDetails.address, &clientDetails.addressSize);
+				// Master socket has changed state, accept incoming sockets.
+				if(i == scMasterDetails(sc)){
 
-				// Check if accept() was successful.
-				if(clientHandle.fd != INVALID_SOCKET){
-					size_t id;
-					clientHandle.events = POLLIN;
-					clientHandle.revents = 0;
-					clientDetails.lastUpdateTick = currentTick;
-					id = scdAddSocket(&server->connectionHandler, &clientHandle, &clientDetails);
-					if(id){
-						flagsSet(ssGetSocketDetails(server, id)->flags, SOCK_CONNECTED);
+					socketHandle  clientHandle;
+					socketDetails clientDetails;
+					clientDetails.addressSize = sizeof(struct sockaddr);
+
+					clientHandle.fd = accept(scMasterHandle(sc)->fd, (struct sockaddr *)&clientDetails.address, &clientDetails.addressSize);
+
+					// Check if accept() was successful.
+					if(clientHandle.fd != INVALID_SOCKET){
+						clientHandle.events = POLLIN;
+						clientHandle.revents = 0;
+						clientDetails.lastTick = currentTick;
+						clientDetails.flags = SOCKET_DETAILS_CONNECTED;
+						scAddSocket(sc, &clientHandle, &clientDetails);
 					}else{
-						// Server is full.
+						#ifdef SOCKET_DEBUG
+						ssReportError("accept()", lastErrorID);
+						#endif
+						return 0;
 					}
+
+				// A client has changed state, receive incoming data.
 				}else{
-					ssReportError("accept()", lastErrorID);
-					return 0;
+
+					// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer.
+					i->lastBufferSize = recv(i->handle->fd, i->lastBuffer, SOCKET_MAX_BUFFER_SIZE, 0);
+
+					if(i->lastBufferSize == -1){
+						// Error encountered, disconnect problematic socket.
+						socketclose(i->handle->fd);
+						flagsSet(i->flags, SOCKET_DETAILS_ERROR);
+						#ifdef SOCKET_DEBUG
+						ssReportError("recv()", lastErrorID);
+						#endif
+						return 0;
+					}else if(i->lastBufferSize == 0){
+						// If the buffer is empty, the connection has closed.
+						socketclose(i->handle->fd);
+						flagsSet(i->flags, SOCKET_DETAILS_DISCONNECTED);
+					}else{
+						// Data received.
+						flagsSet(i->flags, SOCKET_DETAILS_NEW_DATA);
+					}
+
 				}
 
-			// A client has changed state, receive incoming data.
-			}else{
+				// Clear the revents flags.
+				i->handle->revents = 0;
+				--changedSockets;
 
-				// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer.
-				server->connectionHandler.details[i].lastBufferSize = recv(server->connectionHandler.handles[i].fd, server->connectionHandler.details[i].lastBuffer, SOCK_MAX_BUFFER_SIZE, 0);
-
-				if(server->connectionHandler.details[i].lastBufferSize == -1){
-					// Error encountered, disconnect problematic socket.
-					ssReportError("recv()", lastErrorID);
-					socketclose(ssGetSocketHandle(server, server->connectionHandler.details[i].id)->fd);
-					flagsSet(server->connectionHandler.details[i].flags, SOCK_ERROR);
-					return 0;
-				}else if(server->connectionHandler.details[i].lastBufferSize == 0){
-					// If the buffer is empty, the connection has closed.
-					socketclose(ssGetSocketHandle(server, server->connectionHandler.details[i].id)->fd);
-					flagsSet(server->connectionHandler.details[i].flags, SOCK_DISCONNECTED);
-				}else{
-					// Data received.
-					flagsSet(server->connectionHandler.details[i].flags, SOCK_NEW_DATA);
-				}
-
+			// Disconnect the current socket if it has timed out.
+			}else if(flagsAreSet(flags, SOCKET_FLAGS_MANAGE_TIMEOUTS) && i != scMasterDetails(sc) && sdTimedOut(i, currentTick)){
+				flagsSet(i->flags, SOCKET_DETAILS_TIMED_OUT);
 			}
 
-			// Clear the revents flags.
-			server->connectionHandler.handles[i].revents = 0;
-			--changedSockets;
-
-		// Disconnect the socket at index i if it has timed out.
-		}else if(flagsAreSet(flags, SOCK_MANAGE_TIMEOUTS) && ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
-			flagsSet(server->connectionHandler.details[i].flags, SOCK_TIMED_OUT);
+			--j;
 
 		}
+
+		++i;
 
 	}
 
@@ -107,10 +123,6 @@ return_t ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick
 
 }
 
-void ssShutdownTCP(socketServer *server){
-	size_t i = server->connectionHandler.size;
-	while(i > 0){
-		socketclose(server->connectionHandler.handles[--i].fd);
-	}
-	scdDelete(&server->connectionHandler);
+void ssShutdownTCP(socketConnectionHandler *const __RESTRICT__ sc){
+	scDelete(sc);
 }

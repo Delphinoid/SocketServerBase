@@ -1,6 +1,6 @@
 #include "socketShared.h"
 
-#ifdef SOCK_USE_POLL
+#ifdef SOCKET_USE_POLL
 	#ifdef _WIN32
 		WINSOCK_API_LINKAGE int WSAAPI WSAPoll(struct pollfd *ufds, ULONG fds, INT timeout);
 		int pollFunc(socketHandle *ufds, size_t nfds, int timeout){ return WSAPoll(ufds, nfds, timeout); }
@@ -13,10 +13,14 @@
 		struct timeval timeoutConversion;
 		struct timeval *timeoutVar = NULL;
 		fd_set socketSet;
-		size_t socketNum = nfds < SOCK_MAX_SOCKETS ? nfds : SOCK_MAX_SOCKETS;
-		size_t i, j;
-		for(i = 0; i < socketNum; ++i){
-			socketSet.fd_array[i] = ufds[i].fd;
+		size_t socketNum = nfds < SOCKET_MAX_SOCKETS ? nfds : SOCKET_MAX_SOCKETS;
+		int *ssfd = socketSet.fd_array;
+		socketHandle *ufd = ufds;
+		const int *ssfdLast = &ssfd[socketNum];
+		const socketHandle *const ufdLast = &ufd[socketNum];
+		while(ssfd < ssfdLast){
+			*ssfd = ufd->fd;
+			++ssfd; ++ufd;
 		}
 		socketSet.fd_count = socketNum;
 		if(timeout >= 0){
@@ -30,13 +34,18 @@
 			timeoutVar = &timeoutConversion;
 		}
 		changedSockets = select(0, &socketSet, NULL, NULL, timeoutVar);
-		for(i = 0; i < changedSockets; ++i){
-			for(j = 0; j < socketNum; j){
-				if(socketSet.fd_array[i] == ufds[j].fd){
-					ufds[j].revents = POLLIN;
+		ssfd = socketSet.fd_array;
+		ssfdLast = &ssfd[changedSockets];
+		while(ssfd < ssfdLast){
+			ufd = ufds;
+			for(ufd < ufdLast){
+				if(*ssfd = ufd->fd){
+					ufd->revents = POLLIN;
 					break;
 				}
+				++ufd;
 			}
+			++ssfd;
 		}
 		return changedSockets;
 	}

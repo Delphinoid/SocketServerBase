@@ -1,17 +1,19 @@
 #include "socketServer.h"
 #include <string.h>
-#include <stdio.h>
 
 #ifndef _WIN32
 	#include <fcntl.h>
 #endif
 
+#ifdef SOCKET_DEBUG
+#include <stdio.h>
 void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode){
 	printf("\nSocket function %s has failed: %i\nSee here for more information:\nhttps://msdn.microsoft.com/en-us/library/windows/desktop/ms740668%%28v=vs.85%%29.aspx\n\n",
-	       failedFunction, errorCode);
+		   failedFunction, errorCode);
 }
+#endif
 
-static inline return_t ssSetNonBlockMode(const int fd, unsigned long mode){
+static __FORCE_INLINE__ return_t ssSetNonBlockMode(const int fd, unsigned long mode){
 	#ifdef _WIN32
 		return !ioctlsocket(fd, FIONBIO, &mode);
 	#else
@@ -24,7 +26,7 @@ static inline return_t ssSetNonBlockMode(const int fd, unsigned long mode){
 	#endif
 }
 
-static inline int ssGetAddressFamily(const char *const __RESTRICT__ ip){
+static __FORCE_INLINE__ int ssGetAddressFamily(const char *const __RESTRICT__ ip){
 	char buffer[16];
 	if(inet_pton(AF_INET, ip, buffer)){
 		return AF_INET;
@@ -34,50 +36,56 @@ static inline int ssGetAddressFamily(const char *const __RESTRICT__ ip){
 	return -1;
 }
 
-return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, const int argc, char **argv, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, const int, char**)){
+return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, void *args, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, void*)){
 
 	// Initialize server IP, port, type and protocol, then load the server config.
 	struct pollfd masterHandle;
 	socketDetails masterDetails;
 	char ip[45]; ip[0] = '\0';
 	int af;
-	uint16_t port = SOCK_DEFAULT_PORT;
+	uint16_t port = SOCKET_DEFAULT_PORT;
 
+	#ifdef SOCKET_DEBUG
 	puts("Initializing server...");
+	#endif
 
 	server->type = type;
 	server->protocol = protocol;
 	if(ssLoadConfig != NULL){
-		ssLoadConfig(&ip, &port, argc, argv);
+		ssLoadConfig(&ip, &port, args);
 	}
 
 	// Create a socket prototype for the master socket.
 	//
 	// socket(address family, type, protocol)
 	// address family = AF_UNSPEC, which can be either IPv4 or IPv6, AF_INET, which is IPv4 or AF_INET6, which is IPv6.
-	// type = SOCK_STREAM, which uses TCP or SOCK_DGRAM, which uses UDP.
+	// type = SOCKET_STREAM, which uses TCP or SOCKET_DGRAM, which uses UDP.
 	// protocol = IPPROTO_TCP, which specifies to use TCP or IPPROTO_UDP, which specifies to use UDP.
 	af = ssGetAddressFamily(ip);
 	if(af == -1){
-		af = SOCK_DEFAULT_ADDRESS_FAMILY;
+		af = SOCKET_DEFAULT_ADDRESS_FAMILY;
 	}
 	masterHandle.fd = socket(af, server->type, server->protocol);
 	if(masterHandle.fd == INVALID_SOCKET){  // If socket() failed, abort.
+		#ifdef SOCKET_DEBUG
 		ssReportError("socket()", lastErrorID);
+		#endif
 		return 0;
 	}
 	masterHandle.events = POLLIN;
 	masterHandle.revents = 0;
 
-	// If SOCK_POLL_TIMEOUT isn't negative, we want a timeout for recfrom().
-	if(SOCK_POLL_TIMEOUT > 0){
-		// Set SO_RCVTIMEO
-		const unsigned long timeout = SOCK_POLL_TIMEOUT;
-		if(setsockopt(masterHandle.fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout)) == SOCKET_ERROR){
+	// If SOCKET_POLL_TIMEOUT isn't negative, we want a timeout for recfrom().
+	if(SOCKET_POLL_TIMEOUT > 0){
+		// Set SO_RCVTIMEO.
+		const unsigned long timeout = SOCKET_POLL_TIMEOUT;
+		if(setsockopt(masterHandle.fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(unsigned long)) == SOCKET_ERROR){
+			#ifdef SOCKET_DEBUG
 			ssReportError("setsockopt()", lastErrorID);
+			#endif
 			return 0;
 		}
-	}else if(SOCK_POLL_TIMEOUT == 0){
+	}else if(SOCKET_POLL_TIMEOUT == 0){
 		ssSetNonBlockMode(masterHandle.fd, 1);
 	}
 
@@ -94,7 +102,7 @@ return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const i
 		serverAddress4.sin_port = htons(port);  // htons() converts the port from big-endian to little-endian for sockaddr_in.
 		masterDetails.address = *((struct sockaddr_storage *)&serverAddress4);
 
-	}else if(af == AF_INET6){  // Address is IPv6
+	}else if(af == AF_INET6){  // Address is IPv6.
 
 		// Create the sockaddr_in6 structure using the master socket's address family and the supplied IP / port.
 		struct sockaddr_in6 serverAddress6;
@@ -110,75 +118,74 @@ return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const i
 	}
 
 	// Check result of bind()
-	if(bind(masterHandle.fd, (struct sockaddr *)&masterDetails.address, sizeof(masterDetails.address)) == SOCKET_ERROR){  // If bind() failed, abort.
+	if(bind(masterHandle.fd, (struct sockaddr *)&masterDetails.address, sizeof(struct sockaddr_storage)) == SOCKET_ERROR){  // If bind() failed, abort.
+		#ifdef SOCKET_DEBUG
 		ssReportError("bind()", lastErrorID);
+		#endif
 		return 0;
 	}
 
 	// If the server is operating over TCP, set the master socket's state to "listen" so it will start listening for incoming connections from sockets.
 	if(server->protocol == IPPROTO_TCP){
 		if(listen(masterHandle.fd, SOMAXCONN) == SOCKET_ERROR){  // SOMAXCONN = automatically choose maximum number of pending connections, different across systems.
+			#ifdef SOCKET_DEBUG
 			ssReportError("listen()", lastErrorID);
+			#endif
 			return 0;
 		}
 	}
 
 	// Initialize the connection handler.
-	if(!scdInit(&server->connectionHandler, SOCK_MAX_SOCKETS, &masterHandle, &masterDetails)){
+	masterDetails.flags = 0x00;
+	if(!scInit(&server->connectionHandler, SOCKET_MAX_SOCKETS, &masterHandle, &masterDetails)){
+		#ifdef SOCKET_DEBUG
 		puts("Error: the socket connection handler could not be initialized.\n");
+		#endif
 		return 0;
 	}
 
+	#ifdef SOCKET_DEBUG
 	printf("Socket successfully initialized on %s:%u.\n\n", ip, port);
+	#endif
 	return 1;
 
 }
 
-inline socketHandle *ssGetSocketHandle(const socketServer *const __RESTRICT__ server, const size_t socketID){
-	return &server->connectionHandler.handles[server->connectionHandler.idLinks[socketID]];
-}
-
-inline socketDetails *ssGetSocketDetails(const socketServer *const __RESTRICT__ server, const size_t socketID){
-	return &server->connectionHandler.details[server->connectionHandler.idLinks[socketID]];
-}
-
-return_t ssSocketTimedOut(socketServer *const __RESTRICT__ server, const size_t socketID, const uint32_t currentTick){
-	if(socketID > 0){
-		return currentTick - ssGetSocketDetails(server, socketID)->lastUpdateTick >= SOCK_CONNECTION_TIMEOUT;
-	}
-	return 0;
-}
-
-void ssCheckTimeouts(socketServer *const __RESTRICT__ server, const uint32_t currentTick){
+void ssCheckTimeouts(socketConnectionHandler *const __RESTRICT__ sc, const uint32_t currentTick){
 	// This function is slow and mostly unnecessary, so it should be avoided if at all possible!
-	size_t i;
-	for(i = 1; i < server->connectionHandler.size; ++i){
-		// Disconnect the socket at index i if it has timed out.
-		if(ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
-			// UDP sockets use the same handle as the master socket, so they won't be closed.
-			if(server->connectionHandler.handles[i].fd != server->connectionHandler.handles[0].fd){
-				socketclose(server->connectionHandler.handles[i].fd);
+	socketDetails *i = sc->details+1;
+	size_t j = sc->nfds-1;
+	while(j > 0){
+		if(sdValid(i)){
+			// Disconnect the socket at index i if it has timed out.
+			if(sdTimedOut(i, currentTick)){
+				// UDP sockets use the same handle as the master socket, so they won't be closed.
+				if(i != scMasterDetails(sc)){
+					socketclose(i->handle->fd);
+				}
+				scRemoveSocket(sc, i);
 			}
-			scdRemoveSocket(&server->connectionHandler, server->connectionHandler.details[i].id);
-			--i;
+			--j;
 		}
+		++i;
 	}
 }
 
 #ifdef _WIN32
-	return_t ssStartup(){
-		// Initialize Winsock.
-		WSADATA wsaData;
-		int initError = WSAStartup(WINSOCK_VERSION, &wsaData);
+return_t ssStartup(){
+	// Initialize Winsock.
+	WSADATA wsaData;
+	int initError = WSAStartup(WINSOCK_VERSION, &wsaData);
 
-		if(initError != 0){  // If Winsock did not initialize correctly, abort.
-			ssReportError("WSAStartup()", initError);
-			return 0;
-		}
-		return 1;
+	if(initError != 0){  // If Winsock did not initialize correctly, abort.
+		#ifdef SOCKET_DEBUG
+		ssReportError("WSAStartup()", initError);
+		#endif
+		return 0;
 	}
-
-	void ssCleanup(){
-		WSACleanup();
-	}
+	return 1;
+}
+void ssCleanup(){
+	WSACleanup();
+}
 #endif

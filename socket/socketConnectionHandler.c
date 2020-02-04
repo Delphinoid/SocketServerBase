@@ -1,142 +1,115 @@
 #include "socketConnectionHandler.h"
+#include "../memory/memoryManager.h"
 
-return_t scdResize(socketConnectionHandler *scd, const size_t capacity){
-
-	if(capacity > scd->capacity){
-
-		size_t i;
-
-		// Allocate memory for the ID stack.
-		void *buffer = realloc(scd->idStack, capacity*sizeof(size_t));
-		if(buffer != NULL){
-			scd->idStack = buffer;
-		}else{
-			return 0;
-		}
-		// Allocate memory for the used ID array.
-		buffer = realloc(scd->idLinks, capacity*sizeof(size_t));
-		if(buffer != NULL){
-			scd->idLinks = buffer;
-		}else{
-			free(scd->idStack);
-			return 0;
-		}
-		// Allocate memory for the socket handle array.
-		buffer = realloc(scd->handles, capacity*sizeof(socketHandle));
-		if(buffer != NULL){
-			scd->handles = buffer;
-		}else{
-			free(scd->idStack);
-			free(scd->idLinks);
-			return 0;
-		}
-		// Allocate memory for the socket details array.
-		buffer = realloc(scd->details, capacity*sizeof(socketDetails));
-		if(buffer != NULL){
-			scd->details = buffer;
-		}else{
-			free(scd->idStack);
-			free(scd->idLinks);
-			free(scd->handles);
-			return 0;
-		}
-
-		// Initialize the ID stack and used ID array, starting from the old capacity.
-		i = scd->capacity;
-		while(i < capacity){
-			scd->idStack[i] = i;
-			scd->idLinks[i] = 0;
-			++i;
-		}
-
-		scd->capacity = capacity;
-		return 1;
-
-	}
-
-	return 0;
-
+__FORCE_INLINE__ return_t sdTimedOut(const socketDetails *const __RESTRICT__ details, const uint32_t currentTick){
+	return currentTick - details->lastTick >= SOCKET_CONNECTION_TIMEOUT;
 }
 
-return_t scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details){
+return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t capacity, const socketHandle *const __RESTRICT__ masterHandle, const socketDetails *const __RESTRICT__ masterDetails){
 
-	if(scd->size < scd->capacity){
+	socketDetails *details;
+	socketHandle *handle;
+	const socketHandle *handleLast;
 
-		// Link the handle and details arrays to the used ID array.
-		scd->handles[scd->size] = *handle;
-		scd->details[scd->size].id = scd->idStack[scd->size];
-		scd->details[scd->size].addressSize = details->addressSize;
-		scd->details[scd->size].address = details->address;
-		scd->details[scd->size].lastUpdateTick = details->lastUpdateTick;
-		scd->details[scd->size].lastBufferSize = 0;
-		scd->details[scd->size].lastBuffer[0] = '\0';
-		scd->idLinks[scd->idStack[scd->size]] = scd->size;
-		scd->idStack[scd->size] = 0;
+	// Initialize socketDetails.
+	void *memory = memAllocate(capacity * sizeof(socketDetails));
+	if(memory == NULL){
+		return -1;
+	}
+	sc->details = memory;
+	details = memory;
+	sc->detailsLast = details-1;
 
-		return scd->details[scd->size++].id;
+	// Initialize socketHandles.
+	memory = memAllocate(capacity * sizeof(socketHandle));
+	if(memory == NULL){
+		return -1;
+	}
+	sc->handles = memory;
+	handle = memory;
+	sc->handleLast = handle-1;
 
+	// Initialize the fd array.
+	handleLast = &((socketHandle *)memory)[capacity];
+	while(handle < handleLast){
+		handle->fd = (intptr_t)details;
+		details->handle = NULL;
+		++handle; ++details;
 	}
 
-	return 0;
-
-}
-
-return_t scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID){
-
-	// Don't touch element 0 (the master socket).
-	if(socketID > 0){
-
-		size_t i;
-		--scd->size;
-
-		// Shift everything after this element over and adjust their links.
-		for(i = scd->idLinks[socketID]; i < scd->size; ++i){
-			scd->handles[i] = scd->handles[i+1];
-			scd->details[i] = scd->details[i+1];
-			--scd->idLinks[scd->details[i].id];
-		}
-
-		// Free the socket ID.
-		scd->idStack[scd->size] = socketID;
-		scd->idLinks[socketID] = 0;
-		return 1;
-
-	}
-
-	return 0;
-
-}
-
-return_t scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails){
-
-	// Initialize everything.
-	scd->size = 0;
-	scd->capacity = 0;
-	scd->idStack = NULL;
-	scd->idLinks = NULL;
-	scd->handles = NULL;
-	scd->details = NULL;
-	if(scdResize(scd, capacity) == 0){
-		return 0;
-	}
+	sc->capacity = capacity;
+	sc->nfds = 0;
 
 	// Add the master socket.
-	scdAddSocket(scd, masterHandle, masterDetails);
+	scAddSocket(sc, masterHandle, masterDetails);
 	return 1;
 
 }
 
-void scdDelete(socketConnectionHandler *scd){
-	if(scd->idStack != NULL){
-		free(scd->idStack);
+socketDetails *scAddSocket(socketConnectionHandler *const __RESTRICT__ sc, const socketHandle *const __RESTRICT__ handle, const socketDetails *const __RESTRICT__ details){
+
+	if(sc->nfds >= sc->capacity){
+		return NULL;
+	}else{
+
+		// The file descriptor stores a pointer
+		// to its corresponding details buffer.
+		socketHandle *const newHandle = ++sc->handleLast;
+		socketDetails *const newDetails = (socketDetails *)newHandle->fd;
+
+		*newHandle = *handle;
+		newDetails->handle = newHandle;
+		newDetails->addressSize = details->addressSize;
+		newDetails->address = details->address;
+		newDetails->lastTick = details->lastTick;
+		newDetails->lastBufferSize = 0;
+		newDetails->lastBuffer[0] = '\0';
+		newDetails->flags = details->flags;
+
+		sc->detailsLast = newDetails;
+		++sc->nfds;
+
+		return newDetails;
+
 	}
-	if(scd->idLinks != NULL){
-		free(scd->idLinks);
+
+}
+
+return_t scRemoveSocket(socketConnectionHandler *const __RESTRICT__ sc, socketDetails *details){
+
+	// Don't touch the master socket.
+	if(details == scMasterDetails(sc)){
+		return 0;
 	}
-	if(scd->handles != NULL){
-		free(scd->handles);
+
+	// Move the last handle to fill in the gap.
+	*details->handle = *sc->handleLast;
+	// Make the now-empty last handle point to
+	// its new (empty) corresponding details.
+	sc->handleLast->fd = (intptr_t)details;
+	sc->detailsLast->handle = details->handle;
+	// Shift the last handle back.
+	--sc->handleLast;
+
+	// These details are no longer in use.
+	details->handle = NULL;
+
+	--sc->nfds;
+	return 1;
+
+}
+
+void scDelete(socketConnectionHandler *sc){
+
+	socketHandle *handle = sc->handles;
+	const socketHandle *const handleLast = &handle[sc->nfds];
+
+	while(handle < handleLast){
+		socketclose(handle->fd);
+		++handle;
 	}
-	if(scd->details != NULL){
-		free(scd->details);
-	}
+
+	memFree(sc->handles);
+	memFree(sc->details);
+
 }

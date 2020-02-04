@@ -3,42 +3,46 @@
 
 #include "../settings/socketSettings.h"
 
-#ifndef SOCK_DEFAULT_ADDRESS_FAMILY
-	#define SOCK_DEFAULT_ADDRESS_FAMILY AF_INET6
+#ifndef SOCKET_DEFAULT_ADDRESS_FAMILY
+	#define SOCKET_DEFAULT_ADDRESS_FAMILY AF_INET6
 #endif
-#ifndef SOCK_DEFAULT_PORT
-	#define SOCK_DEFAULT_PORT 7249
+#ifndef SOCKET_DEFAULT_PORT
+	#define SOCKET_DEFAULT_PORT 7249
 #endif
-#ifndef SOCK_MAX_BUFFER_SIZE
-	#define SOCK_MAX_BUFFER_SIZE 4096
+#ifndef SOCKET_UDP_MAX_BUFFER_SIZE
+	#define SOCKET_UDP_MAX_BUFFER_SIZE 4096
 #endif
-#ifndef SOCK_POLL_TIMEOUT
-	#define SOCK_POLL_TIMEOUT 0
+#ifndef SOCKET_TCP_MAX_BUFFER_SIZE
+	#define SOCKET_TCP_MAX_BUFFER_SIZE 4096
 #endif
-#ifndef SOCK_CONNECTION_TIMEOUT
-	#define SOCK_CONNECTION_TIMEOUT 60000
+#ifndef SOCKET_POLL_TIMEOUT
+	#define SOCKET_POLL_TIMEOUT 0
 #endif
-#ifndef SOCK_MAX_SOCKETS
-	#define SOCK_MAX_SOCKETS 257
+#ifndef SOCKET_CONNECTION_TIMEOUT
+	#define SOCKET_CONNECTION_TIMEOUT 60000
 #endif
-#ifdef SOCK_USE_POLL
-	#define SOCK_POLL_FUNC "poll()"
+#ifndef SOCKET_MAX_SOCKETS
+	#define SOCKET_MAX_SOCKETS 257
+#endif
+#ifdef SOCKET_USE_POLL
+	#define SOCKET_POLL_FUNC "poll()"
 #else
-	#define SOCK_POLL_FUNC "select()"
+	#define SOCKET_POLL_FUNC "select()"
 #endif
 
 #undef FD_SETSIZE
 #undef __FD_SETSIZE
-#define FD_SETSIZE SOCK_MAX_SOCKETS
-#define __FD_SETSIZE SOCK_MAX_SOCKETS
+#define FD_SETSIZE SOCKET_MAX_SOCKETS
+#define __FD_SETSIZE SOCKET_MAX_SOCKETS
 
 // Flags passed into ssHandleConnections functions.
-#define SOCK_UDP             0x01  // Currently no longer used.
-#define SOCK_TCP             0x02  // Currently no longer used.
-#define SOCK_VERBOSE         0x04  // Currently no longer used.
-#define SOCK_MANAGE_TIMEOUTS 0x08
-#define SOCK_ABSTRACT_HANDLE 0x10  // Currently no longer used.
-#define SOCK_READ_FULL_QUEUE 0x20
+#define SOCKET_FLAGS_UDP             0x01  // Currently no longer used.
+#define SOCKET_FLAGS_TCP             0x02  // Currently no longer used.
+#define SOCKET_FLAGS_VERBOSE         0x04  // Currently no longer used.
+#define SOCKET_FLAGS_MANAGE_TIMEOUTS 0x08
+#define SOCKET_FLAGS_ABSTRACT_HANDLE 0x10  // Currently no longer used.
+#define SOCKET_FLAGS_READ_FULL_QUEUE 0x20
+#define SOCKET_FLAGS_ALLOCATE_SOCKET 0x40  // Currently no longer used.
 
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -56,7 +60,7 @@
 		int fd;
 		short events;
 		short revents;
-	};
+	} pollfd;
 	#define socketHandle struct pollfd
 	#define socketAddrLength int
 	int inet_pton(int af, const char *src, char *dst);
@@ -71,7 +75,7 @@
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
 	#define socketclose(x) close(x)
-	#ifdef SOCK_USE_POLL
+	#ifdef SOCKET_USE_POLL
 		#include <sys/poll.h>
 	#else
 		#define POLLIN     0x0001
@@ -88,7 +92,7 @@
 			int fd;
 			short events;
 			short revents;
-		};
+		} pollfd;
 	#endif
 	#define socketHandle struct pollfd
 	#define socketAddrLength socklen_t

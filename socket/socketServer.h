@@ -18,11 +18,11 @@ typedef struct {
 } socketServer;
 
 // Socket functions shared by TCP and UDP sockets.
+#ifdef SOCKET_DEBUG
 void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode);
-return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, const int argc, char **argv, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, const int, char**));
-socketHandle  *ssGetSocketHandle(const socketServer *const __RESTRICT__ server, const size_t socketID);
-socketDetails *ssGetSocketDetails(const socketServer *const __RESTRICT__ server, const size_t socketID);
-return_t ssSocketTimedOut(socketServer *const __RESTRICT__ server, const size_t socketID, const uint32_t currentTick);
-void ssCheckTimeouts(socketServer *const __RESTRICT__ server, const uint32_t currentTick);
+#endif
+return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, void *args, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, void*));
+socketHandle *ssGetSocketHandle(const socketServer *const __RESTRICT__ server, const size_t socketID);
+void ssCheckTimeouts(socketConnectionHandler *const __RESTRICT__ sc, const uint32_t currentTick);
 
 #endif
