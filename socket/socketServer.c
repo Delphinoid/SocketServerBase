@@ -34,7 +34,7 @@ static inline int ssGetAddressFamily(const char *const __RESTRICT__ ip){
 	return -1;
 }
 
-return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, const int argc, const char *argv[], return_t (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
+return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, const int argc, char **argv, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, const int, char**)){
 
 	// Initialize server IP, port, type and protocol, then load the server config.
 	struct pollfd masterHandle;

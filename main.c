@@ -7,7 +7,7 @@
 socketServer testServerTCP;
 socketServer testServerUDP;
 
-return_t ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const char *argv[]){
+return_t ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, char **argv){
 
 	char *cfgPath = (char*)argv[0];
 	cfgPath[strrchr(cfgPath, '\\') - cfgPath + 1] = '\0';  // Removes program name (everything after the last backslash) from the path
@@ -169,8 +169,8 @@ int main(int argc, char *argv[]){
 
 	if(
 		!ssStartup() ||
-		!ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, (const int)argc, (const char **)argv, &ssLoadConfig) ||
-		!ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, (const int)argc, (const char **)argv, &ssLoadConfig)
+		!ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, argc, argv, &ssLoadConfig) ||
+		!ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, argc, argv, &ssLoadConfig)
 	){
 		return 1;
 	}

@@ -19,7 +19,7 @@ typedef struct {
 
 // Socket functions shared by TCP and UDP sockets.
 void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode);
-return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, const int argc, const char *argv[], return_t (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**));
+return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, const int argc, char **argv, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, const int, char**));
 socketHandle  *ssGetSocketHandle(const socketServer *const __RESTRICT__ server, const size_t socketID);
 socketDetails *ssGetSocketDetails(const socketServer *const __RESTRICT__ server, const size_t socketID);
 return_t ssSocketTimedOut(socketServer *const __RESTRICT__ server, const size_t socketID, const uint32_t currentTick);

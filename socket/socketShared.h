@@ -10,7 +10,7 @@
 	#define SOCK_DEFAULT_PORT 7249
 #endif
 #ifndef SOCK_MAX_BUFFER_SIZE
-	#define SOCK_MAX_BUFFER_SIZE 1024
+	#define SOCK_MAX_BUFFER_SIZE 4096
 #endif
 #ifndef SOCK_POLL_TIMEOUT
 	#define SOCK_POLL_TIMEOUT 0
@@ -19,7 +19,7 @@
 	#define SOCK_CONNECTION_TIMEOUT 60000
 #endif
 #ifndef SOCK_MAX_SOCKETS
-	#define SOCK_MAX_SOCKETS 201
+	#define SOCK_MAX_SOCKETS 257
 #endif
 #ifdef SOCK_USE_POLL
 	#define SOCK_POLL_FUNC "poll()"
