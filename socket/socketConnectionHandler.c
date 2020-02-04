@@ -1,8 +1,10 @@
 #include "socketConnectionHandler.h"
 
-signed char scdResize(socketConnectionHandler *scd, const size_t capacity){
+return_t scdResize(socketConnectionHandler *scd, const size_t capacity){
 
 	if(capacity > scd->capacity){
+
+		size_t i;
 
 		// Allocate memory for the ID stack.
 		void *buffer = realloc(scd->idStack, capacity*sizeof(size_t));
@@ -40,7 +42,7 @@ signed char scdResize(socketConnectionHandler *scd, const size_t capacity){
 		}
 
 		// Initialize the ID stack and used ID array, starting from the old capacity.
-		size_t i = scd->capacity;
+		i = scd->capacity;
 		while(i < capacity){
 			scd->idStack[i] = i;
 			scd->idLinks[i] = 0;
@@ -56,7 +58,7 @@ signed char scdResize(socketConnectionHandler *scd, const size_t capacity){
 
 }
 
-signed char scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details){
+return_t scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details){
 
 	if(scd->size < scd->capacity){
 
@@ -79,15 +81,15 @@ signed char scdAddSocket(socketConnectionHandler *scd, const socketHandle *handl
 
 }
 
-signed char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID){
+return_t scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID){
 
 	// Don't touch element 0 (the master socket).
 	if(socketID > 0){
 
+		size_t i;
 		--scd->size;
 
 		// Shift everything after this element over and adjust their links.
-		size_t i;
 		for(i = scd->idLinks[socketID]; i < scd->size; ++i){
 			scd->handles[i] = scd->handles[i+1];
 			scd->details[i] = scd->details[i+1];
@@ -105,7 +107,7 @@ signed char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID)
 
 }
 
-signed char scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails){
+return_t scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails){
 
 	// Initialize everything.
 	scd->size = 0;

@@ -1,12 +1,17 @@
 #include "socketServer.h"
+#include <string.h>
 #include <stdio.h>
 
-void ssReportError(const char *failedFunction, const int errorCode){
+#ifndef _WIN32
+	#include <fcntl.h>
+#endif
+
+void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode){
 	printf("\nSocket function %s has failed: %i\nSee here for more information:\nhttps://msdn.microsoft.com/en-us/library/windows/desktop/ms740668%%28v=vs.85%%29.aspx\n\n",
 	       failedFunction, errorCode);
 }
 
-static inline signed char ssSetNonBlockMode(const int fd, unsigned long mode){
+static inline return_t ssSetNonBlockMode(const int fd, unsigned long mode){
 	#ifdef _WIN32
 		return !ioctlsocket(fd, FIONBIO, &mode);
 	#else
@@ -19,7 +24,7 @@ static inline signed char ssSetNonBlockMode(const int fd, unsigned long mode){
 	#endif
 }
 
-static inline int ssGetAddressFamily(const char *ip){
+static inline int ssGetAddressFamily(const char *const __RESTRICT__ ip){
 	char buffer[16];
 	if(inet_pton(AF_INET, ip, buffer)){
 		return AF_INET;
@@ -29,29 +34,29 @@ static inline int ssGetAddressFamily(const char *ip){
 	return -1;
 }
 
-signed char ssInit(socketServer *server, const int type, const int protocol, const int argc, const char *argv[],
-                   signed char (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
+return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, const int argc, const char *argv[], return_t (*ssLoadConfig)(char(*)[45], uint16_t*, const int, const char**)){
 
-	puts("Initializing server...");
-
-	/* Initialize server IP, port, type and protocol, then load the server config. */
+	// Initialize server IP, port, type and protocol, then load the server config.
+	struct pollfd masterHandle;
+	socketDetails masterDetails;
 	char ip[45]; ip[0] = '\0';
 	int af;
 	uint16_t port = SOCK_DEFAULT_PORT;
+
+	puts("Initializing server...");
+
 	server->type = type;
 	server->protocol = protocol;
 	if(ssLoadConfig != NULL){
 		ssLoadConfig(&ip, &port, argc, argv);
 	}
 
-	/* Create a socket prototype for the master socket. */
-	/*
-	   socket(address family, type, protocol)
-	   address family = AF_UNSPEC, which can be either IPv4 or IPv6, AF_INET, which is IPv4 or AF_INET6, which is IPv6.
-	   type = SOCK_STREAM, which uses TCP or SOCK_DGRAM, which uses UDP.
-	   protocol = IPPROTO_TCP, which specifies to use TCP or IPPROTO_UDP, which specifies to use UDP.
-	*/
-	struct pollfd masterHandle;
+	// Create a socket prototype for the master socket.
+	//
+	// socket(address family, type, protocol)
+	// address family = AF_UNSPEC, which can be either IPv4 or IPv6, AF_INET, which is IPv4 or AF_INET6, which is IPv6.
+	// type = SOCK_STREAM, which uses TCP or SOCK_DGRAM, which uses UDP.
+	// protocol = IPPROTO_TCP, which specifies to use TCP or IPPROTO_UDP, which specifies to use UDP.
 	af = ssGetAddressFamily(ip);
 	if(af == -1){
 		af = SOCK_DEFAULT_ADDRESS_FAMILY;
@@ -64,7 +69,7 @@ signed char ssInit(socketServer *server, const int type, const int protocol, con
 	masterHandle.events = POLLIN;
 	masterHandle.revents = 0;
 
-	/* If SOCK_POLL_TIMEOUT isn't negative, we want a timeout for recfrom(). */
+	// If SOCK_POLL_TIMEOUT isn't negative, we want a timeout for recfrom().
 	if(SOCK_POLL_TIMEOUT > 0){
 		// Set SO_RCVTIMEO
 		const unsigned long timeout = SOCK_POLL_TIMEOUT;
@@ -76,8 +81,7 @@ signed char ssInit(socketServer *server, const int type, const int protocol, con
 		ssSetNonBlockMode(masterHandle.fd, 1);
 	}
 
-	/* Bind the master socket to the host address. */
-	socketDetails masterDetails;
+	// Bind the master socket to the host address.
 	if(af == AF_INET){
 
 		// Create the sockaddr_in structure using the master socket's address family and the supplied IP / port.
@@ -111,7 +115,7 @@ signed char ssInit(socketServer *server, const int type, const int protocol, con
 		return 0;
 	}
 
-	/* If the server is operating over TCP, set the master socket's state to "listen" so it will start listening for incoming connections from sockets. */
+	// If the server is operating over TCP, set the master socket's state to "listen" so it will start listening for incoming connections from sockets.
 	if(server->protocol == IPPROTO_TCP){
 		if(listen(masterHandle.fd, SOMAXCONN) == SOCKET_ERROR){  // SOMAXCONN = automatically choose maximum number of pending connections, different across systems.
 			ssReportError("listen()", lastErrorID);
@@ -119,7 +123,7 @@ signed char ssInit(socketServer *server, const int type, const int protocol, con
 		}
 	}
 
-	/* Initialize the connection handler. */
+	// Initialize the connection handler.
 	if(!scdInit(&server->connectionHandler, SOCK_MAX_SOCKETS, &masterHandle, &masterDetails)){
 		puts("Error: the socket connection handler could not be initialized.\n");
 		return 0;
@@ -130,23 +134,23 @@ signed char ssInit(socketServer *server, const int type, const int protocol, con
 
 }
 
-inline socketHandle *ssGetSocketHandle(const socketServer *server, const size_t socketID){
+inline socketHandle *ssGetSocketHandle(const socketServer *const __RESTRICT__ server, const size_t socketID){
 	return &server->connectionHandler.handles[server->connectionHandler.idLinks[socketID]];
 }
 
-inline socketDetails *ssGetSocketDetails(const socketServer *server, const size_t socketID){
+inline socketDetails *ssGetSocketDetails(const socketServer *const __RESTRICT__ server, const size_t socketID){
 	return &server->connectionHandler.details[server->connectionHandler.idLinks[socketID]];
 }
 
-signed char ssSocketTimedOut(socketServer *server, const size_t socketID, const uint32_t currentTick){
+return_t ssSocketTimedOut(socketServer *const __RESTRICT__ server, const size_t socketID, const uint32_t currentTick){
 	if(socketID > 0){
 		return currentTick - ssGetSocketDetails(server, socketID)->lastUpdateTick >= SOCK_CONNECTION_TIMEOUT;
 	}
 	return 0;
 }
 
-void ssCheckTimeouts(socketServer *server, const uint32_t currentTick){
-	/* This function is slow and mostly unnecessary, so it should be avoided if at all possible! */
+void ssCheckTimeouts(socketServer *const __RESTRICT__ server, const uint32_t currentTick){
+	// This function is slow and mostly unnecessary, so it should be avoided if at all possible!
 	size_t i;
 	for(i = 1; i < server->connectionHandler.size; ++i){
 		// Disconnect the socket at index i if it has timed out.
@@ -162,12 +166,12 @@ void ssCheckTimeouts(socketServer *server, const uint32_t currentTick){
 }
 
 #ifdef _WIN32
-	signed char ssStartup(){
-		/* Initialize Winsock */
+	return_t ssStartup(){
+		// Initialize Winsock.
 		WSADATA wsaData;
 		int initError = WSAStartup(WINSOCK_VERSION, &wsaData);
 
-		if(initError != 0){  // If Winsock did not initialize correctly, abort
+		if(initError != 0){  // If Winsock did not initialize correctly, abort.
 			ssReportError("WSAStartup()", initError);
 			return 0;
 		}

@@ -1,1 +1,0 @@
-g++ main.c inet_ntop.c inet_pton.c socketConnectionHandler.c socketServer.c socketShared.c socketTCP.c socketUDP.c -o SocketServerMulti.exe -lWs2_32

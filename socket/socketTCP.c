@@ -1,7 +1,8 @@
 #include "socketTCP.h"
+#include <string.h>
 #include <stdio.h>
 
-signed char ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
+return_t ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
 	if(send(clientHandle->fd, msg, strlen(msg) + 1, 0) < 0){
 		ssReportError("send()", lastErrorID);
 		return 0;
@@ -9,13 +10,14 @@ signed char ssSendDataTCP(const socketHandle *clientHandle, const char *msg){
 	return 1;
 }
 
-signed char ssDisconnectSocketTCP(socketServer *server, const size_t socketID){
+return_t ssDisconnectSocketTCP(socketServer *server, const size_t socketID){
 	socketclose(ssGetSocketHandle(server, socketID)->fd);
 	return scdRemoveSocket(&server->connectionHandler, socketID);
 }
 
-signed char ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick, const unsigned char flags){
+return_t ssHandleConnectionsTCP(socketServer *server, const uint32_t currentTick, const flags_t flags){
 
+	size_t i;
 	int changedSockets = pollFunc(server->connectionHandler.handles, server->connectionHandler.size, SOCK_POLL_TIMEOUT);
 
 	// If pollFunc() returned SOCKET_ERROR (-1), return.
@@ -24,10 +26,9 @@ signed char ssHandleConnectionsTCP(socketServer *server, const uint32_t currentT
 		return 0;
 	}
 
-	/* Handle state changes for each socket. */
+	// Handle state changes for each socket.
 	// Loop through each connected socket.
-	size_t i;
-	for(i = 0; ((flags & SOCK_MANAGE_TIMEOUTS) > 0 || changedSockets > 0) && i < server->connectionHandler.size; ++i){
+	for(i = 0; (flagsAreSet(flags, SOCK_MANAGE_TIMEOUTS) || changedSockets > 0) && i < server->connectionHandler.size; ++i){
 
 		// Disconnect the socket at index i if a hang up was detected.
 		if((server->connectionHandler.handles[i].revents & POLLHUP) > 0){
@@ -52,12 +53,13 @@ signed char ssHandleConnectionsTCP(socketServer *server, const uint32_t currentT
 
 				// Check if accept() was successful.
 				if(clientHandle.fd != INVALID_SOCKET){
+					size_t id;
 					clientHandle.events = POLLIN;
 					clientHandle.revents = 0;
 					clientDetails.lastUpdateTick = currentTick;
-					const size_t id = scdAddSocket(&server->connectionHandler, &clientHandle, &clientDetails);
+					id = scdAddSocket(&server->connectionHandler, &clientHandle, &clientDetails);
 					if(id){
-						ssGetSocketDetails(server, id)->flags |= SOCK_CONNECTED;
+						flagsSet(ssGetSocketDetails(server, id)->flags, SOCK_CONNECTED);
 					}else{
 						// Server is full.
 					}
@@ -76,15 +78,15 @@ signed char ssHandleConnectionsTCP(socketServer *server, const uint32_t currentT
 					// Error encountered, disconnect problematic socket.
 					ssReportError("recv()", lastErrorID);
 					socketclose(ssGetSocketHandle(server, server->connectionHandler.details[i].id)->fd);
-					server->connectionHandler.details[i].flags |= SOCK_ERROR;
+					flagsSet(server->connectionHandler.details[i].flags, SOCK_ERROR);
 					return 0;
 				}else if(server->connectionHandler.details[i].lastBufferSize == 0){
 					// If the buffer is empty, the connection has closed.
 					socketclose(ssGetSocketHandle(server, server->connectionHandler.details[i].id)->fd);
-					server->connectionHandler.details[i].flags |= SOCK_DISCONNECTED;
+					flagsSet(server->connectionHandler.details[i].flags, SOCK_DISCONNECTED);
 				}else{
 					// Data received.
-					server->connectionHandler.details[i].flags |= SOCK_NEW_DATA;
+					flagsSet(server->connectionHandler.details[i].flags, SOCK_NEW_DATA);
 				}
 
 			}
@@ -94,8 +96,8 @@ signed char ssHandleConnectionsTCP(socketServer *server, const uint32_t currentT
 			--changedSockets;
 
 		// Disconnect the socket at index i if it has timed out.
-		}else if((flags & SOCK_MANAGE_TIMEOUTS) > 0 && ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
-			server->connectionHandler.details[i].flags |= SOCK_TIMED_OUT;
+		}else if(flagsAreSet(flags, SOCK_MANAGE_TIMEOUTS) && ssSocketTimedOut(server, server->connectionHandler.details[i].id, currentTick)){
+			flagsSet(server->connectionHandler.details[i].flags, SOCK_TIMED_OUT);
 
 		}
 

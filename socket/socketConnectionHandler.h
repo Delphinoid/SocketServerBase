@@ -2,6 +2,9 @@
 #define SOCKETCONNECTIONHANDLER_H
 
 #include "socketShared.h"
+#include "../shared/flags.h"
+#include "../shared/return.h"
+#include "../shared/qualifiers.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -14,12 +17,12 @@
 
 typedef struct {
 	size_t id;
-	int addressSize;  // The size of the socket's address, in bytes.
+	socketAddrLength addressSize;  // The size of the socket's address, in bytes.
 	struct sockaddr_storage address;
 	uint32_t lastUpdateTick;  // The tick that data was last received from the socket on.
 	int lastBufferSize;       // The size of the last buffer received from the socket, in bytes.
 	char lastBuffer[SOCK_MAX_BUFFER_SIZE];  // The last buffer received from the socket.
-	unsigned char flags;
+	flags_t flags;
 } socketDetails;
 
 typedef struct {
@@ -31,10 +34,10 @@ typedef struct {
 	socketDetails *details;  // Holds an array of socketDetails for both TCP and UDP.
 } socketConnectionHandler;
 
-signed char scdResize(socketConnectionHandler *scd, const size_t capacity);
-signed char scdAddSocket(socketConnectionHandler *scd, const socketHandle *handle, const socketDetails *details);
-signed char scdRemoveSocket(socketConnectionHandler *scd, const size_t socketID);
-signed char scdInit(socketConnectionHandler *scd, const size_t capacity, const socketHandle *masterHandle, const socketDetails *masterDetails);
-void scdDelete(socketConnectionHandler *scd);
+return_t scdResize(socketConnectionHandler *const __RESTRICT__ scd, const size_t capacity);
+return_t scdAddSocket(socketConnectionHandler *const __RESTRICT__ scd, const socketHandle *const __RESTRICT__ handle, const socketDetails *const __RESTRICT__ details);
+return_t scdRemoveSocket(socketConnectionHandler *const __RESTRICT__ scd, const size_t socketID);
+return_t scdInit(socketConnectionHandler *const __RESTRICT__ scd, const size_t capacity, const socketHandle *const __RESTRICT__ masterHandle, const socketDetails *const __RESTRICT__ masterDetails);
+void scdDelete(socketConnectionHandler *const __RESTRICT__ scd);
 
 #endif

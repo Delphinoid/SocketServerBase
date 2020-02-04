@@ -1,17 +1,17 @@
 #define WIN32_LEAN_AND_MEAN
-#include "socketTCP.h"
-#include "socketUDP.h"
+#include "socket/socketTCP.h"
+#include "socket/socketUDP.h"
 #include <string.h>
 #include <stdio.h>
 
 socketServer testServerTCP;
 socketServer testServerUDP;
 
-signed char ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const char *argv[]){
+return_t ssLoadConfig(char (*ip)[45], uint16_t *port, const int argc, const char *argv[]){
 
 	char *cfgPath = (char*)argv[0];
 	cfgPath[strrchr(cfgPath, '\\') - cfgPath + 1] = '\0';  // Removes program name (everything after the last backslash) from the path
-	strcpy(cfgPath + strlen(cfgPath), "config.txt");  // Append "config.txt" to the end
+	strcpy(cfgPath + strlen(cfgPath), "config");  // Append "config" to the end
 
 	FILE *serverConfig = fopen(cfgPath, "r");
 	char lineFeed[1024];
@@ -91,7 +91,7 @@ void ssHandleConnectTCP(socketServer *server, const socketHandle *handle, const 
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Accepted TCP connection from %s (socket #%u).\n", IP, details->id);
+	printf("Accepted TCP connection from %s (socket #%lu).\n", IP, (unsigned long)details->id);
 }
 
 void ssHandleBufferTCP(const socketServer *server, const socketDetails *details){
@@ -102,7 +102,7 @@ void ssHandleBufferTCP(const socketServer *server, const socketDetails *details)
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Data received over TCP from %s (socket #%u): %s\n", IP, details->id, details->lastBuffer);
+	printf("Data received over TCP from %s (socket #%lu): %s\n", IP, (unsigned long)details->id, details->lastBuffer);
 	ssSendDataTCP(ssGetSocketHandle(server, details->id), "Data received over TCP successfully. You should get this.\n");
 }
 
@@ -114,7 +114,7 @@ void ssHandleDisconnectTCP(socketServer *server, const socketDetails *details){
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Closing TCP connection with %s (socket #%u).\n", IP, details->id);
+	printf("Closing TCP connection with %s (socket #%lu).\n", IP, (unsigned long)details->id);
 	scdRemoveSocket(&server->connectionHandler, details->id);
 }
 
@@ -126,7 +126,7 @@ void ssHandleConnectUDP(socketServer *server, const socketHandle *handle, const 
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Accepted UDP connection from %s (socket #%u).\n", IP, details->id);
+	printf("Accepted UDP connection from %s (socket #%lu).\n", IP, (unsigned long)details->id);
 }
 
 void ssHandleBufferUDP(const socketServer *server, const socketDetails *details){
@@ -149,7 +149,7 @@ void ssHandleDisconnectUDP(socketServer *server, const socketDetails *details){
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Closing UDP connection with %s (socket #%u).\n", IP, details->id);
+	printf("Closing UDP connection with %s (socket #%lu).\n", IP, (unsigned long)details->id);
 	scdRemoveSocket(&server->connectionHandler, details->id);
 }
 
@@ -163,16 +163,20 @@ void cleanup(){
 
 int main(int argc, char *argv[]){
 
-	if(!ssStartup() ||  // Initialize Winsock
-	   !ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, (const int)argc, (const char **)argv, &ssLoadConfig) ||
-	   !ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, (const int)argc, (const char **)argv, &ssLoadConfig))
-		return 1;
-
-	atexit(cleanup);
-
 	size_t i;
 	unsigned char flagsUDP = SOCK_ABSTRACT_HANDLE | SOCK_READ_FULL_QUEUE;
 	unsigned char flagsTCP = 0;
+
+	if(
+		!ssStartup() ||
+		!ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, (const int)argc, (const char **)argv, &ssLoadConfig) ||
+		!ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, (const int)argc, (const char **)argv, &ssLoadConfig)
+	){
+		return 1;
+	}
+
+	atexit(cleanup);
+	
 	while(1){
 		if(!ssHandleConnectionsUDP(&testServerUDP, 0, flagsUDP) ||
 		   !ssHandleConnectionsTCP(&testServerTCP, 0, flagsTCP)){

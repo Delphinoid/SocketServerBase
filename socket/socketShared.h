@@ -1,7 +1,7 @@
 #ifndef SOCKETSHARED_H
 #define SOCKETSHARED_H
 
-#include "socketSettings.h"
+#include "../settings/socketSettings.h"
 
 #ifndef SOCK_DEFAULT_ADDRESS_FAMILY
 	#define SOCK_DEFAULT_ADDRESS_FAMILY AF_INET6
@@ -58,6 +58,7 @@
 		short revents;
 	};
 	#define socketHandle struct pollfd
+	#define socketAddrLength int
 	int inet_pton(int af, const char *src, char *dst);
 	const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 #else
@@ -65,6 +66,7 @@
 	#include <arpa/inet.h>
 	#include <netdb.h>
 	#include <unistd.h>
+	#include <errno.h>
 	#define lastErrorID errno
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
@@ -89,8 +91,9 @@
 		};
 	#endif
 	#define socketHandle struct pollfd
+	#define socketAddrLength socklen_t
 #endif
 
-int pollFunc(socketHandle*, size_t, int);
+int pollFunc(socketHandle *ufds, size_t nfds, int timeout);
 
 #endif
