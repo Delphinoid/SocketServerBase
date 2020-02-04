@@ -1,5 +1,5 @@
-#ifndef INLINE_H
-#define INLINE_H
+#ifndef QUALIFIERS_H
+#define QUALIFIERS_H
 
 #if __STDC_VERSION__ >= 199901L
 	#ifdef _MSC_VER
