@@ -3,13 +3,14 @@
 
 #include "socketConnectionHandler.h"
 
-#ifdef _WIN32
-	return_t ssStartup();
-	void ssCleanup();
-#else
-	#define ssStartup() 1
-	#define ssCleanup() ;
-#endif
+typedef struct {
+	int type;
+	int protocol;
+	char ip[45];
+	uint16_t port;
+	int backlog;  // Maximum number of queued connections for listen().
+	size_t connections;  // Initial maximum number of connected sockets. May be subject to resizes if SOCKET_REALLOCATE is specified.
+} ssConfig;
 
 typedef struct {
 	int type;
@@ -21,8 +22,16 @@ typedef struct {
 #ifdef SOCKET_DEBUG
 void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode);
 #endif
-return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, void *args, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, void*));
+return_t ssInit(socketServer *const __RESTRICT__ server, ssConfig config);
 socketHandle *ssGetSocketHandle(const socketServer *const __RESTRICT__ server, const size_t socketID);
 void ssCheckTimeouts(socketConnectionHandler *const __RESTRICT__ sc, const uint32_t currentTick);
+
+#ifdef _WIN32
+	return_t ssStartup();
+	void ssCleanup();
+#else
+	#define ssStartup() 1
+	#define ssCleanup() ;
+#endif
 
 #endif

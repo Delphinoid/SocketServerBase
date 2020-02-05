@@ -10,9 +10,9 @@
 socketServer testServerTCP;
 socketServer testServerUDP;
 
-return_t ssLoadConfig(char (*ip)[45], uint16_t *port, void *args){
+return_t ssConfigLoad(ssConfig *const config, char **argv){
 
-	char *cfgPath = ((char **)args)[0];
+	char *cfgPath = argv[0];
 	memcpy(strrchr(cfgPath, '\\') + 1, "config\0", 7);  // Append "config" to the end.
 
 	FILE *serverConfig = fopen(cfgPath, "r");
@@ -60,11 +60,11 @@ return_t ssLoadConfig(char (*ip)[45], uint16_t *port, void *args){
 			if(lineLength > 7){
 				// IP
 				if(strncmp(line, "ip = ", 5) == 0){
-					strncpy(*ip, line+5, 40);
+					strncpy(config->ip, line+5, 40);
 
 				// Port
 				}else if(strncmp(line, "port = ", 7) == 0){
-					*port = strtol(line+7, NULL, 0);
+					config->port = strtol(line+7, NULL, 0);
 
 				}
 			}
@@ -171,13 +171,29 @@ int main(int argc, char **argv){
 	unsigned char flagsUDP = SOCKET_FLAGS_ABSTRACT_HANDLE | SOCKET_FLAGS_READ_FULL_QUEUE;
 	unsigned char flagsTCP = 0x00;
 
+	ssConfig configTCP = {
+		.type = SOCK_STREAM,
+		.protocol = IPPROTO_TCP,
+		.backlog = SOMAXCONN,
+		.connections = SOCKET_MAX_SOCKETS
+	};
+	ssConfig configUDP = {
+		.type = SOCK_DGRAM,
+		.protocol = IPPROTO_UDP,
+		.backlog = SOMAXCONN,
+		.connections = SOCKET_MAX_SOCKETS
+	};
+	ssConfigLoad(&configTCP, argv);
+	ssConfigLoad(&configUDP, argv);
+	puts("");
+
 	if(
 		#ifndef SOCKET_USE_MALLOC
 		memMngrInit(MEMORY_MANAGER_DEFAULT_VIRTUAL_HEAP_SIZE, 1) < 0 ||
 		#endif
 		!ssStartup() ||
-		!ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, argv, &ssLoadConfig) ||
-		!ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, argv, &ssLoadConfig)
+		!ssInit(&testServerTCP, configTCP) ||
+		!ssInit(&testServerUDP, configUDP)
 	){
 		return 1;
 	}

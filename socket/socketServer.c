@@ -36,24 +36,19 @@ static __FORCE_INLINE__ int ssGetAddressFamily(const char *const __RESTRICT__ ip
 	return -1;
 }
 
-return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const int protocol, void *args, return_t (*ssLoadConfig)(char(*)[45], uint16_t*, void*)){
+return_t ssInit(socketServer *const __RESTRICT__ server, ssConfig config){
 
 	// Initialize server IP, port, type and protocol, then load the server config.
 	struct pollfd masterHandle;
 	socketDetails masterDetails;
-	char ip[45]; ip[0] = '\0';
 	int af;
-	uint16_t port = SOCKET_DEFAULT_PORT;
 
 	#ifdef SOCKET_DEBUG
 	puts("Initializing server...");
 	#endif
 
-	server->type = type;
-	server->protocol = protocol;
-	if(ssLoadConfig != NULL){
-		ssLoadConfig(&ip, &port, args);
-	}
+	server->type = config.type;
+	server->protocol = config.protocol;
 
 	// Create a socket prototype for the master socket.
 	//
@@ -61,12 +56,13 @@ return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const i
 	// address family = AF_UNSPEC, which can be either IPv4 or IPv6, AF_INET, which is IPv4 or AF_INET6, which is IPv6.
 	// type = SOCKET_STREAM, which uses TCP or SOCKET_DGRAM, which uses UDP.
 	// protocol = IPPROTO_TCP, which specifies to use TCP or IPPROTO_UDP, which specifies to use UDP.
-	af = ssGetAddressFamily(ip);
+	af = ssGetAddressFamily(config.ip);
 	if(af == -1){
 		af = SOCKET_DEFAULT_ADDRESS_FAMILY;
 	}
-	masterHandle.fd = socket(af, server->type, server->protocol);
-	if(masterHandle.fd == INVALID_SOCKET){  // If socket() failed, abort.
+	masterHandle.fd = socket(af, config.type, config.protocol);
+	if(masterHandle.fd == INVALID_SOCKET){
+		// If socket() failed, abort.
 		#ifdef SOCKET_DEBUG
 		ssReportError("socket()", lastErrorID);
 		#endif
@@ -90,29 +86,34 @@ return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const i
 	}
 
 	// Bind the master socket to the host address.
+	// Address is IPv4.
 	if(af == AF_INET){
 
 		// Create the sockaddr_in structure using the master socket's address family and the supplied IP / port.
 		struct sockaddr_in serverAddress4;
-		if(!inet_pton(af, ip, (char*)&(serverAddress4.sin_addr))){
+		if(!inet_pton(af, config.ip, (char*)&(serverAddress4.sin_addr))){
 			serverAddress4.sin_addr.s_addr = INADDR_ANY;
-			strcpy(ip, "INADDR_ANY");
+			memcpy(config.ip, "INADDR_ANY\0", 11);
 		}
 		serverAddress4.sin_family = af;
-		serverAddress4.sin_port = htons(port);  // htons() converts the port from big-endian to little-endian for sockaddr_in.
+		// htons() converts the port from big-endian to little-endian for sockaddr_in.
+		serverAddress4.sin_port = htons(config.port);
 		masterDetails.address = *((struct sockaddr_storage *)&serverAddress4);
 
-	}else if(af == AF_INET6){  // Address is IPv6.
+	// Address is IPv6.
+	}else if(af == AF_INET6){
 
 		// Create the sockaddr_in6 structure using the master socket's address family and the supplied IP / port.
 		struct sockaddr_in6 serverAddress6;
-		memset(&serverAddress6, 0, sizeof(struct sockaddr_in6));  // Set everything in sockaddr_in6 to 0, as there are a number of fields we don't otherwise set.
-		if(!inet_pton(af, ip, (char*)&(serverAddress6.sin6_addr))){
+		// Set everything in sockaddr_in6 to 0, as there are a number of fields we don't otherwise set.
+		memset(&serverAddress6, 0, sizeof(struct sockaddr_in6));
+		if(!inet_pton(af, config.ip, (char*)&(serverAddress6.sin6_addr))){
 			serverAddress6.sin6_addr = in6addr_any;
-			strcpy(ip, "in6addr_any");
+			memcpy(config.ip, "in6addr_any\0", 12);
 		}
 		serverAddress6.sin6_family = af;
-		serverAddress6.sin6_port = htons(port);  // htons() converts the port from big-endian to little-endian for sockaddr_in6.
+		// htons() converts the port from big-endian to little-endian for sockaddr_in6.
+		serverAddress6.sin6_port = htons(config.port);
 		masterDetails.address = *((struct sockaddr_storage *)&serverAddress6);
 
 	}
@@ -126,8 +127,9 @@ return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const i
 	}
 
 	// If the server is operating over TCP, set the master socket's state to "listen" so it will start listening for incoming connections from sockets.
-	if(server->protocol == IPPROTO_TCP){
-		if(listen(masterHandle.fd, SOMAXCONN) == SOCKET_ERROR){  // SOMAXCONN = automatically choose maximum number of pending connections, different across systems.
+	if(config.protocol == IPPROTO_TCP){
+		// SOMAXCONN = automatically choose maximum number of pending connections, different across systems.
+		if(listen(masterHandle.fd, config.backlog) == SOCKET_ERROR){
 			#ifdef SOCKET_DEBUG
 			ssReportError("listen()", lastErrorID);
 			#endif
@@ -137,7 +139,7 @@ return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const i
 
 	// Initialize the connection handler.
 	masterDetails.flags = 0x00;
-	if(!scInit(&server->connectionHandler, SOCKET_MAX_SOCKETS, &masterHandle, &masterDetails)){
+	if(!scInit(&server->connectionHandler, config.connections, &masterHandle, &masterDetails)){
 		#ifdef SOCKET_DEBUG
 		puts("Error: the socket connection handler could not be initialized.\n");
 		#endif
@@ -145,7 +147,7 @@ return_t ssInit(socketServer *const __RESTRICT__ server, const int type, const i
 	}
 
 	#ifdef SOCKET_DEBUG
-	printf("Socket successfully initialized on %s:%u.\n\n", ip, port);
+	printf("Socket successfully initialized on %s:%u.\n\n", config.ip, config.port);
 	#endif
 	return 1;
 
