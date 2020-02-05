@@ -24,7 +24,7 @@
 #ifndef SOCKET_MAX_SOCKETS
 	#define SOCKET_MAX_SOCKETS 257
 #endif
-#ifdef SOCKET_USE_POLL
+#ifndef SOCKET_USE_SELECT
 	#define SOCKET_POLL_FUNC "poll()"
 #else
 	#define SOCKET_POLL_FUNC "select()"
@@ -75,7 +75,7 @@
 	#define INVALID_SOCKET -1
 	#define SOCKET_ERROR -1
 	#define socketclose(x) close(x)
-	#ifdef SOCKET_USE_POLL
+	#ifndef SOCKET_USE_SELECT
 		#include <sys/poll.h>
 	#else
 		#define POLLIN     0x0001

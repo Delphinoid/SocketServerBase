@@ -1,6 +1,6 @@
 #include "socketShared.h"
 
-#ifdef SOCKET_USE_POLL
+#ifndef SOCKET_USE_SELECT
 	#ifdef _WIN32
 		WINSOCK_API_LINKAGE int WSAAPI WSAPoll(struct pollfd *ufds, ULONG fds, INT timeout);
 		int pollFunc(socketHandle *ufds, size_t nfds, int timeout){ return WSAPoll(ufds, nfds, timeout); }

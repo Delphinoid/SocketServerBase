@@ -37,7 +37,7 @@ return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t cap
 	// Initialize the fd array.
 	detailsLast = (socketDetails *)handle;
 	while(details < detailsLast){
-		handle->fd = (uintptr_t)details;
+		*((socketDetails **)handle) = details;
 		details->handle = NULL;
 		++handle; ++details;
 	}
@@ -102,7 +102,7 @@ static __FORCE_INLINE__ return_t scResize(socketConnectionHandler *const __RESTR
 			++handleOld;
 			--handlesLeft;
 		}else{
-			handle->fd = (uintptr_t)details;
+			*((socketDetails **)handle) = details;
 		}
 		if(detailsLeft > 0){
 			if(details->handle != NULL){
@@ -137,7 +137,7 @@ return_t scAddSocket(socketConnectionHandler *const __RESTRICT__ sc, const socke
 		// The file descriptor stores a pointer
 		// to its corresponding details buffer.
 		socketHandle *const newHandle = ++sc->handleLast;
-		socketDetails *const newDetails = (socketDetails *)newHandle->fd;
+		socketDetails *const newDetails = *((socketDetails **)newHandle);
 
 		*newHandle = *handle;
 		newDetails->handle = newHandle;
@@ -168,7 +168,7 @@ return_t scRemoveSocket(socketConnectionHandler *const __RESTRICT__ sc, socketDe
 	*details->handle = *sc->handleLast;
 	// Make the now-empty last handle point to
 	// its new (empty) corresponding details.
-	sc->handleLast->fd = (uintptr_t)details;
+	*((socketDetails **)sc->handleLast) = details;
 	sc->detailsLast->handle = details->handle;
 	// Shift the last handle back.
 	--sc->handleLast;
