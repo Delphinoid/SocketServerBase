@@ -62,15 +62,29 @@ return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, 
 			// If the socket was not found (we currently do not have a session
 			// with it) and we have enough room, add it to the connection handler.
 			if(!found){
-				if(sc->nfds < sc->capacity){
-					socketHandle clientHandle;
-					clientHandle.fd = scMasterHandle(sc)->fd;
-					clientDetails.flags = SOCKET_DETAILS_CONNECTED;
-					scAddSocket(sc, &clientHandle, &clientDetails);
-				}else{
+				#ifdef SOCKET_REALLOCATE
+				return_t r;
+				#endif
+				socketHandle clientHandle;
+				clientHandle.fd = scMasterHandle(sc)->fd;
+				clientDetails.flags = SOCKET_DETAILS_CONNECTED;
+				#ifdef SOCKET_REALLOCATE
+				r = scAddSocket(sc, &clientHandle, &clientDetails);
+				if(r < 0){
+					// Memory allocation failure.
+					return -1;
+				}else if(r == 0){
 					// Server is full.
 					continue;
 				}
+				// Set i to the newly added socket.
+				i = sc->detailsLast;
+				#else
+				if(scAddSocket(sc, &clientHandle, &clientDetails) == 0){
+					// Server is full.
+					continue;
+				}
+				#endif
 			}
 
 			// Copy over the last buffer.

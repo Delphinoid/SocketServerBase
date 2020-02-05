@@ -65,11 +65,26 @@ return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, 
 
 					// Check if accept() was successful.
 					if(clientHandle.fd != INVALID_SOCKET){
+						#ifdef SOCKET_REALLOCATE
+						return_t r;
+						#endif
 						clientHandle.events = POLLIN;
 						clientHandle.revents = 0;
 						clientDetails.lastTick = currentTick;
 						clientDetails.flags = SOCKET_DETAILS_CONNECTED;
+						#ifdef SOCKET_REALLOCATE
+						r = scAddSocket(sc, &clientHandle, &clientDetails);
+						if(r < 0){
+							// Memory allocation failure.
+							return -1;
+						}else if(r == 0){
+							// Server is full.
+						}
+						// Set i to the master socket.
+						i = sc->detailsLast;
+						#else
 						scAddSocket(sc, &clientHandle, &clientDetails);
+						#endif
 					}else{
 						#ifdef SOCKET_DEBUG
 						ssReportError("accept()", lastErrorID);

@@ -8,12 +8,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-// Works... as long as sizeof(int) is 4.
-// This is just the MSB in the fd. We set
-// the fd to the address of the corresponding
-// socketDetails with this bit set.
-#define SOCKET_HANDLE_INACTIVE_MASK 0x8000
-
 // Various socketDetails status flags.
 #define SOCKET_DETAILS_NEW_DATA     0x01  // The socket has sent data between the previous and current updates.
 #define SOCKET_DETAILS_CONNECTED    0x02  // The socket has connected between the previous and current updates.
@@ -32,8 +26,8 @@ typedef struct {
 } socketDetails;
 
 typedef struct {
-	socketHandle *handles;   // Holds an array of struct pollfds, separate from details for TCP socket polling.
 	socketDetails *details;  // Holds an array of socketDetails for both TCP and UDP.
+	socketHandle *handles;   // Holds an array of struct pollfds, separate from details for TCP socket polling.
 	socketHandle *handleLast;    // The handle at the very end of the array.
 	socketDetails *detailsLast;  // The socket details corresponding to handleLast.
 	size_t capacity;  // Total number of file descriptors allocated.
@@ -46,7 +40,7 @@ return_t sdTimedOut(const socketDetails *const __RESTRICT__ details, const uint3
 #define scMasterHandle(sc) ((sc)->handles)
 #define scMasterDetails(sc) ((sc)->details)
 return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t capacity, const socketHandle *const __RESTRICT__ masterHandle, const socketDetails *const __RESTRICT__ masterDetails);
-socketDetails *scAddSocket(socketConnectionHandler *const __RESTRICT__ sc, const socketHandle *const __RESTRICT__ handle, const socketDetails *const __RESTRICT__ details);
+return_t scAddSocket(socketConnectionHandler *const __RESTRICT__ sc, const socketHandle *const __RESTRICT__ handle, const socketDetails *const __RESTRICT__ details);
 return_t scRemoveSocket(socketConnectionHandler *const __RESTRICT__ sc, socketDetails *details);
 void scDelete(socketConnectionHandler *const __RESTRICT__ sc);
 

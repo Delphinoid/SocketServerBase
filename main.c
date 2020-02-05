@@ -1,5 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
+#ifndef SOCKET_USE_MALLOC
 #include "memory/memoryManager.h"
+#endif
 #include "socket/socketTCP.h"
 #include "socket/socketUDP.h"
 #include <string.h>
@@ -157,7 +159,10 @@ void cleanup(){
 	ssShutdownTCP(&testServerTCP.connectionHandler);
 	ssShutdownUDP(&testServerUDP.connectionHandler);
 	#ifdef _WIN32
-		ssCleanup();
+	ssCleanup();
+	#endif
+	#ifndef SOCKET_USE_MALLOC
+	memMngrDelete();
 	#endif
 }
 
@@ -167,7 +172,9 @@ int main(int argc, char **argv){
 	unsigned char flagsTCP = 0x00;
 
 	if(
+		#ifndef SOCKET_USE_MALLOC
 		memMngrInit(MEMORY_MANAGER_DEFAULT_VIRTUAL_HEAP_SIZE, 1) < 0 ||
+		#endif
 		!ssStartup() ||
 		!ssInit(&testServerTCP, SOCK_STREAM, IPPROTO_TCP, argv, &ssLoadConfig) ||
 		!ssInit(&testServerUDP, SOCK_DGRAM,  IPPROTO_UDP, argv, &ssLoadConfig)

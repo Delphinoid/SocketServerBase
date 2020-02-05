@@ -2,14 +2,14 @@
 #include <string.h>
 
 #ifndef _WIN32
-	#include <fcntl.h>
+#include <fcntl.h>
 #endif
 
 #ifdef SOCKET_DEBUG
 #include <stdio.h>
 void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode){
 	printf("\nSocket function %s has failed: %i\nSee here for more information:\nhttps://msdn.microsoft.com/en-us/library/windows/desktop/ms740668%%28v=vs.85%%29.aspx\n\n",
-		   failedFunction, errorCode);
+	       failedFunction, errorCode);
 }
 #endif
 
