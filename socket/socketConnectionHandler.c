@@ -4,8 +4,18 @@
 #include "../memory/memoryManager.h"
 #endif
 
+#ifdef SOCKET_MANAGE_TIMEOUTS
 __FORCE_INLINE__ return_t sdTimedOut(const socketDetails *const __RESTRICT__ details, const uint32_t currentTick){
 	return currentTick - details->lastTick >= SOCKET_CONNECTION_TIMEOUT;
+}
+#endif
+
+static __FORCE_INLINE__ socketID scSocketID(const socketConnectionHandler *const __RESTRICT__ sc, const socketDetails *const details){
+	return (((uintptr_t)details) - ((uintptr_t)sc->details)) / sizeof(socketDetails);
+}
+
+socketDetails *scSocket(socketConnectionHandler *const __RESTRICT__ sc, const socketID id){
+	return &sc->details[id];
 }
 
 return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t capacity, const socketHandle *const __RESTRICT__ masterHandle, const socketDetails *const __RESTRICT__ masterDetails){
@@ -38,6 +48,7 @@ return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t cap
 	while(details < detailsLast){
 		*((socketDetails **)handle) = details;
 		details->handle = NULL;
+		details->id = scSocketID(sc, details);
 		++handle; ++details;
 	}
 
@@ -110,6 +121,7 @@ static __FORCE_INLINE__ return_t scResize(socketConnectionHandler *const __RESTR
 			}
 		}else{
 			details->handle = NULL;
+			details->id = scSocketID(sc, details);
 		}
 		++details; ++handle;
 	}
@@ -142,7 +154,9 @@ return_t scAddSocket(socketConnectionHandler *const __RESTRICT__ sc, const socke
 		newDetails->handle = newHandle;
 		newDetails->addressSize = details->addressSize;
 		newDetails->address = details->address;
+		#ifdef SOCKET_MANAGE_TIMEOUTS
 		newDetails->lastTick = details->lastTick;
+		#endif
 		newDetails->lastBufferSize = 0;
 		newDetails->lastBuffer[0] = '\0';
 		newDetails->flags = details->flags;

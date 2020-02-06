@@ -11,7 +11,11 @@ return_t ssSendDataUDP(const socketConnectionHandler *const __RESTRICT__ sc, con
 	return 1;
 }
 
-return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, uint32_t currentTick, const flags_t flags){
+#ifdef SOCKET_MANAGE_TIMEOUTS
+return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, const flags_t flags, const uint32_t currentTick){
+#else
+return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, const flags_t flags){
+#endif
 
 	// Keep receiving data while the buffer is not empty.
 	do {
@@ -41,6 +45,7 @@ return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, 
 					// Check if the addresses are the same for the two sockets (includes port).
 					if(!found && memcmp(&clientDetails.address, &i->address, clientDetails.addressSize)){
 						found = 1;
+					#ifdef SOCKET_MANAGE_TIMEOUTS
 						if(flagsAreUnset(flags, SOCKET_FLAGS_MANAGE_TIMEOUTS)){
 							break;
 						}
@@ -48,6 +53,7 @@ return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, 
 					// Disconnect the current socket if it has timed out.
 					}else if(flagsAreSet(flags, SOCKET_FLAGS_MANAGE_TIMEOUTS) && sdTimedOut(i, currentTick)){
 						flagsSet(i->flags, SOCKET_DETAILS_TIMED_OUT);
+					#endif
 					}
 
 					--j;

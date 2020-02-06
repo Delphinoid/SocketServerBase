@@ -93,7 +93,7 @@ void ssHandleConnectTCP(socketServer *server, socketDetails *details){
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Accepted TCP connection from %s (socket #%d).\n", IP, details->handle->fd);
+	printf("Accepted TCP connection from %s (socket #%d).\n", IP, details->id);
 }
 
 void ssHandleBufferTCP(const socketServer *server, socketDetails *details){
@@ -104,7 +104,7 @@ void ssHandleBufferTCP(const socketServer *server, socketDetails *details){
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Data received over TCP from %s (socket #%d): %s\n", IP, details->handle->fd, details->lastBuffer);
+	printf("Data received over TCP from %s (socket #%d): %s\n", IP, details->id, details->lastBuffer);
 	ssSendDataTCP(details->handle, "Data received over TCP successfully. You should get this.\n");
 }
 
@@ -116,7 +116,7 @@ void ssHandleDisconnectTCP(socketServer *server, socketDetails *details){
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Closing TCP connection with %s (socket #%d).\n", IP, details->handle->fd);
+	printf("Closing TCP connection with %s (socket #%d).\n", IP, details->id);
 	scRemoveSocket(&server->connectionHandler, details);
 }
 
@@ -128,7 +128,7 @@ void ssHandleConnectUDP(socketServer *server, socketDetails *details){
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Accepted UDP connection from %s (socket #%d).\n", IP, details->handle->fd);
+	printf("Accepted UDP connection from %s (socket #%d).\n", IP, details->id);
 }
 
 void ssHandleBufferUDP(const socketServer *server, socketDetails *details){
@@ -151,7 +151,7 @@ void ssHandleDisconnectUDP(socketServer *server, socketDetails *details){
 	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 	          &IP[0],
 	          sizeof(IP));
-	printf("Closing UDP connection with %s (socket #%d).\n", IP, details->handle->fd);
+	printf("Closing UDP connection with %s (socket #%d).\n", IP, details->id);
 	scRemoveSocket(&server->connectionHandler, details);
 }
 
@@ -168,8 +168,8 @@ void cleanup(){
 
 int main(int argc, char **argv){
 
-	unsigned char flagsUDP = SOCKET_FLAGS_ABSTRACT_HANDLE | SOCKET_FLAGS_READ_FULL_QUEUE;
-	unsigned char flagsTCP = 0x00;
+	flags_t flagsUDP = SOCKET_FLAGS_ABSTRACT_HANDLE | SOCKET_FLAGS_READ_FULL_QUEUE;
+	flags_t flagsTCP = 0x00;
 
 	ssConfig configTCP = {
 		.type = SOCK_STREAM,
@@ -206,8 +206,8 @@ int main(int argc, char **argv){
 		size_t j;
 
 		if(
-			!ssHandleConnectionsUDP(&testServerUDP.connectionHandler, 0, flagsUDP) ||
-			!ssHandleConnectionsTCP(&testServerTCP.connectionHandler, 0, flagsTCP)
+			!ssHandleConnectionsUDP(&testServerUDP.connectionHandler, flagsUDP) ||
+			!ssHandleConnectionsTCP(&testServerTCP.connectionHandler, flagsTCP)
 		){
 			break;
 		}
@@ -226,14 +226,10 @@ int main(int argc, char **argv){
 					ssHandleBufferTCP(&testServerTCP, i);
 					flagsUnset(i->flags, SOCKET_DETAILS_NEW_DATA);
 				}
-				if(
-					flagsAreSet(i->flags, SOCKET_DETAILS_DISCONNECTED) ||
-					flagsAreSet(i->flags, SOCKET_DETAILS_TIMED_OUT) ||
-					flagsAreSet(i->flags, SOCKET_DETAILS_ERROR)
-				){
+				if(flagsAreSet(i->flags, SOCKET_DETAILS_DISCONNECTED | SOCKET_DETAILS_ERROR | SOCKET_DETAILS_TIMED_OUT)){
 					// Socket has disconnected.
 					ssHandleDisconnectTCP(&testServerTCP, i);
-					flagsUnset(i->flags, SOCKET_DETAILS_DISCONNECTED | SOCKET_DETAILS_TIMED_OUT | SOCKET_DETAILS_ERROR);
+					flagsUnset(i->flags, SOCKET_DETAILS_DISCONNECTED | SOCKET_DETAILS_ERROR | SOCKET_DETAILS_TIMED_OUT);
 				}
 				--j;
 			}

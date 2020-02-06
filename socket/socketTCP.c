@@ -17,7 +17,11 @@ return_t ssDisconnectSocketTCP(socketConnectionHandler *const __RESTRICT__ sc, s
 	return scRemoveSocket(sc, clientDetails);
 }
 
-return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, const uint32_t currentTick, const flags_t flags){
+#ifdef SOCKET_MANAGE_TIMEOUTS
+return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, const flags_t flags, const uint32_t currentTick){
+#else
+return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, const flags_t flags){
+#endif
 
 	socketDetails *i = sc->details;
 	size_t j = sc->nfds;
@@ -51,8 +55,10 @@ return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, 
 			// Check if any revents flags have been set.
 			}else if(i->handle->revents != 0){
 
+				#ifdef SOCKET_MANAGE_TIMEOUTS
 				// Set the last update tick.
 				i->lastTick = currentTick;
+				#endif
 
 				// Master socket has changed state, accept incoming sockets.
 				if(i == scMasterDetails(sc)){
@@ -70,7 +76,9 @@ return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, 
 						#endif
 						clientHandle.events = POLLIN;
 						clientHandle.revents = 0;
+						#ifdef SOCKET_MANAGE_TIMEOUTS
 						clientDetails.lastTick = currentTick;
+						#endif
 						clientDetails.flags = SOCKET_DETAILS_CONNECTED;
 						#ifdef SOCKET_REALLOCATE
 						r = scAddSocket(sc, &clientHandle, &clientDetails);
@@ -121,9 +129,11 @@ return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, 
 				i->handle->revents = 0;
 				--changedSockets;
 
+			#ifdef SOCKET_MANAGE_TIMEOUTS
 			// Disconnect the current socket if it has timed out.
 			}else if(flagsAreSet(flags, SOCKET_FLAGS_MANAGE_TIMEOUTS) && i != scMasterDetails(sc) && sdTimedOut(i, currentTick)){
 				flagsSet(i->flags, SOCKET_DETAILS_TIMED_OUT);
+			#endif
 			}
 
 			--j;

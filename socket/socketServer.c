@@ -153,6 +153,7 @@ return_t ssInit(socketServer *const __RESTRICT__ server, ssConfig config){
 
 }
 
+#ifdef SOCKET_MANAGE_TIMEOUTS
 void ssCheckTimeouts(socketConnectionHandler *const __RESTRICT__ sc, const uint32_t currentTick){
 	// This function is slow and mostly unnecessary, so it should be avoided if at all possible!
 	socketDetails *i = sc->details+1;
@@ -172,6 +173,7 @@ void ssCheckTimeouts(socketConnectionHandler *const __RESTRICT__ sc, const uint3
 		++i;
 	}
 }
+#endif
 
 #ifdef _WIN32
 return_t ssStartup(){
