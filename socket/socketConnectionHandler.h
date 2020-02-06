@@ -15,11 +15,9 @@
 #define SOCKET_DETAILS_ERROR        0x08  // There has been an error with the socket between the previous and current updates.
 #define SOCKET_DETAILS_TIMED_OUT    0x10  // The socket has timed out between the previous and current updates.
 
-typedef uintptr_t socketID;
-
 typedef struct {
 	socketHandle *handle;                     // Pointer to the corresponding handle. NULL if inactive.
-	socketID id;                              // Index in the details array.
+	uintptr_t id;                             // Index in the details array.
 	socketAddrLength addressSize;             // The size of the socket's address, in bytes.
 	struct sockaddr_storage address;          // Socket address.
 	#ifdef SOCKET_MANAGE_TIMEOUTS
@@ -51,7 +49,7 @@ return_t sdTimedOut(const socketDetails *const __RESTRICT__ details, const uint3
 return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t capacity, const socketHandle *const __RESTRICT__ masterHandle, const socketDetails *const __RESTRICT__ masterDetails);
 return_t scAddSocket(socketConnectionHandler *const __RESTRICT__ sc, const socketHandle *const __RESTRICT__ handle, const socketDetails *const __RESTRICT__ details);
 return_t scRemoveSocket(socketConnectionHandler *const __RESTRICT__ sc, socketDetails *details);
-socketDetails *scSocket(socketConnectionHandler *const __RESTRICT__ sc, const socketID id);
+socketDetails *scSocket(socketConnectionHandler *const __RESTRICT__ sc, const uintptr_t id);
 void scDelete(socketConnectionHandler *const __RESTRICT__ sc);
 
 #endif

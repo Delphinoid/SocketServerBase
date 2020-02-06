@@ -10,11 +10,11 @@ __FORCE_INLINE__ return_t sdTimedOut(const socketDetails *const __RESTRICT__ det
 }
 #endif
 
-static __FORCE_INLINE__ socketID scSocketID(const socketConnectionHandler *const __RESTRICT__ sc, const socketDetails *const details){
+static __FORCE_INLINE__ uintptr_t scSocketID(const socketConnectionHandler *const __RESTRICT__ sc, const socketDetails *const details){
 	return (((uintptr_t)details) - ((uintptr_t)sc->details)) / sizeof(socketDetails);
 }
 
-socketDetails *scSocket(socketConnectionHandler *const __RESTRICT__ sc, const socketID id){
+socketDetails *scSocket(socketConnectionHandler *const __RESTRICT__ sc, const uintptr_t id){
 	return &sc->details[id];
 }
 

@@ -23,7 +23,6 @@ typedef struct {
 void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode);
 #endif
 return_t ssInit(socketServer *const __RESTRICT__ server, ssConfig config);
-socketHandle *ssGetSocketHandle(const socketServer *const __RESTRICT__ server, const size_t socketID);
 #ifdef SOCKET_MANAGE_TIMEOUTS
 void ssCheckTimeouts(socketConnectionHandler *const __RESTRICT__ sc, const uint32_t currentTick);
 #else
