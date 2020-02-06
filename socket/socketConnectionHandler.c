@@ -15,17 +15,16 @@ return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t cap
 	const socketDetails *detailsLast;
 
 	// Initialize socketDetails.
-	void *const memory =
+	details =
 	#ifdef SOCKET_USE_MALLOC
 		malloc(capacity * (sizeof(socketDetails) + sizeof(socketHandle)));
 	#else
 		memAllocate(capacity * (sizeof(socketDetails) + sizeof(socketHandle)));
 	#endif
-	if(memory == NULL){
+	if(details == NULL){
 		// Memory allocation failure.
 		return -1;
 	}
-	details = memory;
 	sc->details = details;
 	sc->detailsLast = details-1;
 
