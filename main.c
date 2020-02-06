@@ -86,72 +86,78 @@ return_t ssConfigLoad(ssConfig *const config, char **argv){
 }
 
 void ssHandleConnectTCP(socketServer *server, socketDetails *details){
-	char IP[45];
-	inet_ntop(details->address.ss_family,
-	          (details->address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
-	          &IP[0],
-	          sizeof(IP));
-	printf("Accepted TCP connection from %s:%u (socket #%lu).\n", IP, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
+	char ip[46];
+	inet_ntop(
+		details->address.ss_family,
+		(details->address.ss_family == AF_INET ?
+		(void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+		ip, sizeof(ip)
+	);
+	printf("Accepted TCP connection from %s:%u (socket #%lu).\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
 }
 
 void ssHandleBufferTCP(const socketServer *server, socketDetails *details){
-	char IP[45];
-	inet_ntop(details->address.ss_family,
-	          (details->address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
-	          &IP[0],
-	          sizeof(IP));
-	printf("Data received over TCP from %s:%u (socket #%lu): %s\n", IP, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->lastBuffer);
+	char ip[46];
+	inet_ntop(
+		details->address.ss_family,
+		(details->address.ss_family == AF_INET ?
+		(void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+		ip, sizeof(ip)
+	);
+	printf("Data received over TCP from %s:%u (socket #%lu): %s\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->lastBuffer);
 	ssSendDataTCP(details->handle, "Data received over TCP successfully. You should get this.\n");
 }
 
 void ssHandleDisconnectTCP(socketServer *server, socketDetails *details){
-	char IP[45];
-	inet_ntop(details->address.ss_family,
-	          (details->address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
-	          &IP[0],
-	          sizeof(IP));
-	printf("Closing TCP connection with %s:%u (socket #%lu).\n", IP, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
+	char ip[46];
+	inet_ntop(
+		details->address.ss_family,
+		(details->address.ss_family == AF_INET ?
+		(void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+		ip, sizeof(ip)
+	);
+	printf("Closing TCP connection with %s:%u (socket #%lu).\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
 	scRemoveSocket(&server->connectionHandler, details);
 }
 
 void ssHandleConnectUDP(socketServer *server, socketDetails *details){
-	char IP[45];
-	inet_ntop(details->address.ss_family,
-	          (details->address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
-	          &IP[0],
-	          sizeof(IP));
-	printf("Accepted UDP connection from %s:%u (socket #%lu).\n", IP, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
+	char ip[46];
+	inet_ntop(
+		details->address.ss_family,
+		(details->address.ss_family == AF_INET ?
+		(void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+		ip, sizeof(ip)
+	);
+	printf("Accepted UDP connection from %s:%u (socket #%lu).\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
 }
 
 void ssHandleBufferUDP(const socketServer *server, socketDetails *details){
-	char IP[45];
-	inet_ntop(details->address.ss_family,
-	          (details->address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
-	          &IP[0],
-	          sizeof(IP));
-	printf("Data received over UDP from %s:%u (socket #%lu): %s\n", IP, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->lastBuffer);
+	char ip[46];
+	inet_ntop(
+		details->address.ss_family,
+		(details->address.ss_family == AF_INET ?
+		(void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+		ip, sizeof(ip)
+	);
+	printf("Data received over UDP from %s:%u (socket #%lu): %s\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->lastBuffer);
 	ssSendDataUDP(&server->connectionHandler, details, "Data received over UDP successfully. You might get this.\n");
 }
 
 void ssHandleDisconnectUDP(socketServer *server, socketDetails *details){
-	char IP[45];
-	inet_ntop(details->address.ss_family,
-	          (details->address.ss_family == AF_INET ?
-	          (void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
-	          (void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
-	          &IP[0],
-	          sizeof(IP));
-	printf("Closing UDP connection with %s:%u (socket #%lu).\n", IP, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
+	char ip[46];
+	inet_ntop(
+		details->address.ss_family,
+		(details->address.ss_family == AF_INET ?
+		(void *)(&((struct sockaddr_in *)&details->address)->sin_addr) :
+		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
+		ip, sizeof(ip)
+	);
+	printf("Closing UDP connection with %s:%u (socket #%lu).\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id);
 	scRemoveSocket(&server->connectionHandler, details);
 }
 
@@ -250,14 +256,10 @@ int main(int argc, char **argv){
 					ssHandleBufferUDP(&testServerUDP, i);
 					flagsUnset(i->flags, SOCKET_DETAILS_NEW_DATA);
 				}
-				if(
-					flagsAreSet(i->flags, SOCKET_DETAILS_DISCONNECTED) ||
-					flagsAreSet(i->flags, SOCKET_DETAILS_TIMED_OUT) ||
-					flagsAreSet(i->flags, SOCKET_DETAILS_ERROR)
-				){
+				if(flagsAreSet(i->flags, SOCKET_DETAILS_DISCONNECTED | SOCKET_DETAILS_ERROR | SOCKET_DETAILS_TIMED_OUT)){
 					// Socket has disconnected.
 					ssHandleDisconnectUDP(&testServerUDP, i);
-					flagsUnset(i->flags, SOCKET_DETAILS_DISCONNECTED | SOCKET_DETAILS_TIMED_OUT | SOCKET_DETAILS_ERROR);
+					flagsUnset(i->flags, SOCKET_DETAILS_DISCONNECTED | SOCKET_DETAILS_ERROR | SOCKET_DETAILS_TIMED_OUT);
 				}
 				--j;
 			}
