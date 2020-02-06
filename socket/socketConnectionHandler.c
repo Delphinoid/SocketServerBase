@@ -62,7 +62,7 @@ return_t scInit(socketConnectionHandler *const __RESTRICT__ sc, const size_t cap
 
 static __FORCE_INLINE__ return_t scResize(socketConnectionHandler *const __RESTRICT__ sc){
 
-	uintptr_t dOffset, hOffset;
+	uintptr_t offset;
 	socketDetails *details;
 	socketHandle *handle;
 	socketHandle *handleOld;
@@ -88,21 +88,16 @@ static __FORCE_INLINE__ return_t scResize(socketConnectionHandler *const __RESTR
 	handleOld = (socketHandle *)&details[sc->capacity];
 	sc->capacity = capacity;
 
-	// Get the offset to add to each details' handle pointer
-	// and the offset to add to each handle's details pointer.
-	if(sc->details > details){
-		dOffset = ((uintptr_t)sc->details) - ((uintptr_t)details);
-		hOffset = ((uintptr_t)sc->handles) - ((uintptr_t)handle);
-	}else{
-		dOffset = ((uintptr_t)details) - ((uintptr_t)sc->details);
-		hOffset = ((uintptr_t)handle) - ((uintptr_t)sc->handles);
-	}
+	// Get the offset to add to each details' handle pointer.
+	// This should also work if the allocated space is before
+	// the old space in memory.
+	offset = ((uintptr_t)handle) - ((uintptr_t)sc->handles);
 
 	// Shift member pointers.
 	sc->details = details;
-	sc->detailsLast = (socketDetails *)(((uintptr_t)sc->detailsLast) + dOffset);
+	sc->detailsLast = (socketDetails *)(((uintptr_t)sc->detailsLast) + ((uintptr_t)details) - ((uintptr_t)sc->details));
 	sc->handles = handle;
-	sc->handleLast = (socketHandle *)(((uintptr_t)sc->handleLast) + hOffset);
+	sc->handleLast = (socketHandle *)(((uintptr_t)sc->handleLast) + offset);
 
 	// Fix element pointers.
 	detailsLast = (socketDetails *)handle;
@@ -116,7 +111,7 @@ static __FORCE_INLINE__ return_t scResize(socketConnectionHandler *const __RESTR
 		}
 		if(detailsLeft > 0){
 			if(details->handle != NULL){
-				details->handle = (socketHandle *)(((uintptr_t)details->handle) + hOffset);
+				details->handle = (socketHandle *)(((uintptr_t)details->handle) + offset);
 				--detailsLeft;
 			}
 		}else{
