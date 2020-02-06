@@ -196,18 +196,22 @@ return_t scRemoveSocket(socketConnectionHandler *const __RESTRICT__ sc, socketDe
 
 void scDelete(socketConnectionHandler *sc){
 
-	socketHandle *handle = sc->handles;
-	const socketHandle *const handleLast = &handle[sc->nfds];
+	if(sc->details != NULL){
 
-	while(handle < handleLast){
-		socketclose(handle->fd);
-		++handle;
+		socketHandle *handle = sc->handles;
+		const socketHandle *const handleLast = &handle[sc->nfds];
+
+		while(handle < handleLast){
+			socketclose(handle->fd);
+			++handle;
+		}
+
+		#ifdef SOCKET_USE_MALLOC
+		free(sc->details);
+		#else
+		memFree(sc->details);
+		#endif
+
 	}
-
-	#ifdef SOCKET_USE_MALLOC
-	free(sc->details);
-	#else
-	memFree(sc->details);
-	#endif
 
 }

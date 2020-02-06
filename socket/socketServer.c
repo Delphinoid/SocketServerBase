@@ -49,6 +49,7 @@ return_t ssInit(socketServer *const __RESTRICT__ server, ssConfig config){
 
 	server->type = config.type;
 	server->protocol = config.protocol;
+	server->connectionHandler.details = NULL;
 
 	// Create a socket prototype for the master socket.
 	//
