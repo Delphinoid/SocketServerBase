@@ -24,14 +24,14 @@ return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, 
 		socketDetails clientDetails;
 		clientDetails.addressSize = sizeof(struct sockaddr);
 
-		// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer.
-		clientDetails.lastBufferSize = recvfrom(
-			scMasterHandle(sc)->fd, clientDetails.lastBuffer, SOCKET_MAX_BUFFER_SIZE, 0,
+		// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in buffer.
+		clientDetails.bufferSize = recvfrom(
+			scMasterHandle(sc)->fd, clientDetails.buffer, SOCKET_MAX_BUFFER_SIZE, 0,
 			(struct sockaddr *)&clientDetails.address, &clientDetails.addressSize
 		);
 
 		// Check if anything was received.
-		if(clientDetails.lastBufferSize > 0){
+		if(clientDetails.bufferSize > 0){
 
 			unsigned int found = 0;
 			socketDetails *i = sc->details+1;
@@ -94,8 +94,8 @@ return_t ssHandleConnectionsUDP(socketConnectionHandler *const __RESTRICT__ sc, 
 			}
 
 			// Copy over the last buffer.
-			i->lastBufferSize = clientDetails.lastBufferSize;
-			memcpy(i->lastBuffer, clientDetails.lastBuffer, clientDetails.lastBufferSize);
+			i->bufferSize = clientDetails.bufferSize;
+			memcpy(i->buffer, clientDetails.buffer, clientDetails.bufferSize);
 
 			// Do something with the received data.
 			flagsSet(i->flags, SOCKET_DETAILS_NEW_DATA);

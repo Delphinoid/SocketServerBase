@@ -106,7 +106,7 @@ void ssHandleBufferTCP(const socketServer *server, socketDetails *details){
 		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 		ip, sizeof(ip)
 	);
-	printf("Data received over TCP from %s:%u (socket #%lu): %s\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->lastBuffer);
+	printf("Data received over TCP from %s:%u (socket #%lu): %s\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->buffer);
 	ssSendDataTCP(details->handle, "Data received over TCP successfully. You should get this.\n");
 }
 
@@ -144,7 +144,7 @@ void ssHandleBufferUDP(const socketServer *server, socketDetails *details){
 		(void *)(&((struct sockaddr_in6 *)&details->address)->sin6_addr)),
 		ip, sizeof(ip)
 	);
-	printf("Data received over UDP from %s:%u (socket #%lu): %s\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->lastBuffer);
+	printf("Data received over UDP from %s:%u (socket #%lu): %s\n", ip, ((struct sockaddr_in *)&details->address)->sin_port, (unsigned long)details->id, details->buffer);
 	ssSendDataUDP(&server->connectionHandler, details, "Data received over UDP successfully. You might get this.\n");
 }
 

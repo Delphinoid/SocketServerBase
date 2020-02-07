@@ -103,10 +103,10 @@ return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, 
 				// A client has changed state, receive incoming data.
 				}else{
 
-					// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in lastBuffer.
-					i->lastBufferSize = recv(i->handle->fd, i->lastBuffer, SOCKET_MAX_BUFFER_SIZE, 0);
+					// Receives up to MAX_BUFFER_SIZE bytes of data from a client socket and stores it in buffer.
+					i->bufferSize = recv(i->handle->fd, i->buffer, SOCKET_MAX_BUFFER_SIZE, 0);
 
-					if(i->lastBufferSize == -1){
+					if(i->bufferSize == -1){
 						// Error encountered, disconnect problematic socket.
 						socketclose(i->handle->fd);
 						flagsSet(i->flags, SOCKET_DETAILS_ERROR);
@@ -114,7 +114,7 @@ return_t ssHandleConnectionsTCP(socketConnectionHandler *const __RESTRICT__ sc, 
 						ssReportError("recv()", lastErrorID);
 						#endif
 						return 0;
-					}else if(i->lastBufferSize == 0){
+					}else if(i->bufferSize == 0){
 						// If the buffer is empty, the connection has closed.
 						socketclose(i->handle->fd);
 						flagsSet(i->flags, SOCKET_DETAILS_DISCONNECTED);

@@ -39,7 +39,7 @@
 		while(ssfd < ssfdLast){
 			ufd = ufds;
 			for(ufd < ufdLast){
-				if(*ssfd = ufd->fd){
+				if(*ssfd == ufd->fd){
 					ufd->revents = POLLIN;
 					break;
 				}

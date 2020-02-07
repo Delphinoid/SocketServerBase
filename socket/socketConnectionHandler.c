@@ -152,8 +152,8 @@ return_t scAddSocket(socketConnectionHandler *const __RESTRICT__ sc, const socke
 		#ifdef SOCKET_MANAGE_TIMEOUTS
 		newDetails->lastTick = details->lastTick;
 		#endif
-		newDetails->lastBufferSize = 0;
-		newDetails->lastBuffer[0] = '\0';
+		newDetails->bufferSize = 0;
+		newDetails->buffer[0] = '\0';
 		newDetails->flags = details->flags;
 
 		sc->detailsLast = newDetails;

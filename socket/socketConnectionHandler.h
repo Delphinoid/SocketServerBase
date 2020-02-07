@@ -24,8 +24,8 @@ typedef struct {
 	uint32_t lastTick;                        // The tick that data was last received from the socket on.
 	#endif
 	// Remove the following eventually.
-	int lastBufferSize;                       // The size of the last buffer received from the socket, in bytes.
-	char lastBuffer[SOCKET_MAX_BUFFER_SIZE];  // The last buffer received from the socket.
+	int bufferSize;                       // The size of the last buffer received from the socket, in bytes.
+	char buffer[SOCKET_MAX_BUFFER_SIZE];  // The last buffer received from the socket.
 	flags_t flags;
 } socketDetails;
 
