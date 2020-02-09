@@ -1,4 +1,5 @@
 #include "socketUDP.h"
+#include <string.h>
 
 #ifdef _WIN32
 int ssSendUDP(const socketServer *const __RESTRICT__ server, const socketDetails *const __RESTRICT__ details, const char *const __RESTRICT__ buffer, const int length){
