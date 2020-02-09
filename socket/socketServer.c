@@ -39,7 +39,7 @@ static __FORCE_INLINE__ int ssGetAddressFamily(const char *const __RESTRICT__ ip
 	return -1;
 }
 
-int ssInit(socketServer *const __RESTRICT__ server, ssConfig config){
+int ssInit(void *const __RESTRICT__ server, ssConfig config){
 
 	// Initialize server IP, port, type and protocol, then load the server config.
 	struct pollfd masterHandle;
@@ -49,8 +49,6 @@ int ssInit(socketServer *const __RESTRICT__ server, ssConfig config){
 	#ifdef SOCKET_DEBUG
 	puts("Initializing server...");
 	#endif
-
-	server->details = NULL;
 
 	// Create a socket prototype for the master socket.
 	//
@@ -139,12 +137,30 @@ int ssInit(socketServer *const __RESTRICT__ server, ssConfig config){
 		}
 	}
 
-	// Initialize the connection handler.
-	if(!scInit(server, config.connections, &masterHandle, &masterDetails)){
-		#ifdef SOCKET_DEBUG
-		puts("Error: the socket connection handler could not be initialized.\n");
-		#endif
-		return 0;
+	masterDetails.id = 0;
+	if(config.allocate == SOCKET_SERVER_ALLOCATE_EVERYTHING){
+
+		// Initialize the connection handler.
+		((socketServer *const)server)->details = NULL;
+		if(!scInit(server, config.connections, &masterHandle, &masterDetails)){
+			#ifdef SOCKET_DEBUG
+			puts("Error: the socket connection handler could not be initialized.\n");
+			#endif
+			return 0;
+		}
+
+	}else if(config.allocate == SOCKET_SERVER_ALLOCATE_LIGHTWEIGHT){
+
+		// This should use a free-list or something.
+
+	}else{
+
+		// Don't allocate a connection handler. Just return the master socket.
+		// The programmer can keep track of connections themselves if they wish.
+		((socketMaster *const)server)->handle = masterHandle;
+		((socketMaster *const)server)->address = masterDetails.address;
+		((socketMaster *const)server)->addressSize = masterDetails.addressSize;
+
 	}
 
 	#ifdef SOCKET_DEBUG

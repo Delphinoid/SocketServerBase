@@ -33,13 +33,13 @@ int ssPollTCP(socketServer *const __RESTRICT__ server){
 
 		socketHandle clientHandle;
 		socketDetails clientDetails;
-		clientDetails.addressSize = sizeof(struct sockaddr);
 
 		// Clear the master socket's revents flags.
 		master->revents = 0;
 		--changedSockets;
 
 		// Accept the new connection.
+		clientDetails.addressSize = sizeof(struct sockaddr);
 		clientHandle.fd = accept(master->fd, (struct sockaddr *)&clientDetails.address, &clientDetails.addressSize);
 
 		// Check if accept() was successful.

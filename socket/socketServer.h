@@ -6,9 +6,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+// If initializing with SOCKET_SERVER_ALLOCATE_NOTHING,
+// there is no need to call ssDelete().
+#define SOCKET_SERVER_ALLOCATE_NOTHING    0x00
+#define SOCKET_SERVER_ALLOCATE_EVERYTHING  0x01
+#define SOCKET_SERVER_ALLOCATE_LIGHTWEIGHT 0x02
+
 typedef struct {
 	int type;
 	int protocol;
+	int allocate;
 	char ip[45];
 	uint16_t port;
 	int backlog;  // Maximum number of queued connections for listen().
@@ -31,11 +38,17 @@ typedef struct {
 	size_t nfds;      // Number of file descriptors, specifically for TCP socket polling.
 } socketServer;
 
+typedef struct {
+	socketHandle handle;
+	struct sockaddr_storage address;
+	socketAddrLength addressSize;
+} socketMaster;
+
 // Socket functions shared by TCP and UDP sockets.
 #ifdef SOCKET_DEBUG
 void ssReportError(const char *const __RESTRICT__ failedFunction, const int errorCode);
 #endif
-int ssInit(socketServer *const __RESTRICT__ server, ssConfig config);
+int ssInit(void *const __RESTRICT__ server, ssConfig config);
 int ssDisconnect(socketServer *const __RESTRICT__ server, socketDetails *const clientDetails);
 #define ssDelete(server) scDelete(server)
 
