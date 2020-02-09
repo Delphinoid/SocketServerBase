@@ -278,10 +278,8 @@ int main(int argc, char **argv){
 
 				}
 
-				++i;
-
 			}
-			--j;
+			++i;
 		}
 
 	}
